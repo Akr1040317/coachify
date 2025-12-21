@@ -23,6 +23,7 @@ export default function CoachesPage() {
 
   useEffect(() => {
     loadCoaches();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const loadCoaches = async () => {

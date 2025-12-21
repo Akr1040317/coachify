@@ -17,6 +17,7 @@ export default function ArticlesPage() {
 
   useEffect(() => {
     loadArticles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
   const loadArticles = async () => {
