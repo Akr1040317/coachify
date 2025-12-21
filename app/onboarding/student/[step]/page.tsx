@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
 import { StudentOnboarding } from "@/components/onboarding/StudentOnboarding";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 export default function StudentOnboardingPage() {
   const params = useParams();
@@ -45,5 +47,19 @@ export default function StudentOnboardingPage() {
     sessionStorage.setItem("tempUserId_student", userId);
   }
 
-  return <StudentOnboarding currentStep={step} userId={userId} isPreSignup={!user} />;
+  return (
+    <div className="min-h-screen bg-[var(--background)]">
+      <Navbar />
+      
+      {/* Background decorative elements */}
+      <div className="fixed inset-0 gradient-mesh opacity-30 pointer-events-none" />
+      <div className="fixed top-40 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      
+      <div className="relative z-10 pt-20">
+        <StudentOnboarding currentStep={step} userId={userId} isPreSignup={!user} />
+      </div>
+      
+      <Footer />
+    </div>
+  );
 }

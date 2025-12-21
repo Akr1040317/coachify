@@ -110,22 +110,38 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
 
   const handleNext = async () => {
     try {
-      await saveData();
+      // Save data, but don't block navigation on errors for step 1
+      try {
+        await saveData();
+      } catch (saveError) {
+        console.error("Error saving data:", saveError);
+        // For step 1, we can continue even if save fails
+        if (currentStep > 1) {
+          throw saveError;
+        }
+      }
       
+      // Navigate to next step
       if (currentStep < totalSteps) {
-        router.push(`/onboarding/student/${currentStep + 1}`);
+        const nextStep = currentStep + 1;
+        router.push(`/onboarding/student/${nextStep}`);
       } else {
         if (isPreSignup) {
           // Redirect to signup page
           router.push(`/onboarding/student/${totalSteps + 1}`);
         } else {
-          // Complete onboarding
-          await updateUserData(userId, { onboardingCompleted: true });
+          try {
+            await updateUserData(userId, { onboardingCompleted: true });
+          } catch (updateError) {
+            console.error("Error updating user data:", updateError);
+          }
           router.push("/app/student/dashboard");
         }
       }
     } catch (error) {
       console.error("Error in handleNext:", error);
+      // Show user-friendly error message
+      alert("There was an error. Please try again.");
     }
   };
 

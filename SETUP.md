@@ -6,6 +6,7 @@ Create a `.env.local` file in the root directory with the following variables:
 
 ```env
 # Stripe Configuration (Required for payments)
+# These are SECRET keys - never commit these to git!
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
@@ -14,7 +15,7 @@ NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ```
 
-Note: Firebase configuration is currently hardcoded in `lib/firebase/config.ts`. For production, move these to environment variables.
+**Note**: Firebase configuration is hardcoded in `lib/firebase/config.ts`. Firebase client config values (apiKey, projectId, etc.) are safe to expose publicly - security is handled by Firebase Security Rules and domain restrictions in the Firebase Console.
 
 ## Stripe Setup
 

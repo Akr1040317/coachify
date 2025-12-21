@@ -4,21 +4,6 @@
 
 Add these environment variables in your Vercel project settings:
 
-### Firebase Configuration
-
-1. Go to Vercel Dashboard > Your Project > Settings > Environment Variables
-2. Add the following variables (use `NEXT_PUBLIC_` prefix for client-side variables):
-
-```
-NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyCiJaNpyvQGJf2_1F5Qat1-ynoB9ClmU5o
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=coachify-21435.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=coachify-21435
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=coachify-21435.firebasestorage.app
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=274999680644
-NEXT_PUBLIC_FIREBASE_APP_ID=1:274999680644:web:2d09f4b311573322f4acd1
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-8D9MWSN2KH
-```
-
 ### Stripe Configuration
 
 ```
@@ -49,8 +34,8 @@ NEXT_PUBLIC_BASE_URL=https://your-domain.vercel.app
 
 - ✅ Never commit `.env.local` or `.env` files to git
 - ✅ Use different Stripe keys for production vs development
-- ✅ Firebase config is safe to expose (it's public client config)
 - ✅ Keep `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` secret
+- ✅ Firebase config is hardcoded in the codebase (safe to expose - protected by Security Rules)
 
 ## After Adding Variables
 

@@ -62,7 +62,12 @@ export function WizardStepShell({
           </button>
 
           <button
-            onClick={onNext}
+            onClick={(e) => {
+              e.preventDefault();
+              if (onNext && canGoNext) {
+                onNext();
+              }
+            }}
             disabled={!canGoNext || !onNext}
             className={`
               px-6 py-3 rounded-lg
@@ -71,7 +76,7 @@ export function WizardStepShell({
               transition-all duration-200
               ${!canGoNext || !onNext
                 ? "opacity-50 cursor-not-allowed"
-                : "hover:shadow-xl hover:scale-105"
+                : "hover:shadow-xl hover:scale-105 active:scale-95"
               }
             `}
           >
