@@ -123,18 +123,15 @@ export function Navbar() {
 
           {/* Auth Buttons */}
           <div className="flex items-center gap-4">
-            {loading ? (
-              // Show nothing while loading to prevent flash
-              <div className="w-20 h-8" />
-            ) : user && userRole ? (
-              // Only show Dashboard if we successfully got userRole
+            {user && userRole ? (
+              // Show Dashboard if user is authenticated and has role
               <Link href={`/app/${userRole}/dashboard`}>
                 <GlowButton variant="outline" size="sm">
                   Dashboard
                 </GlowButton>
               </Link>
             ) : (
-              // Show Get Started and Sign In if no user
+              // Show Get Started and Sign In by default (when no user or loading)
               <>
                 <Link href="/get-started">
                   <GlowButton variant="primary" size="sm">

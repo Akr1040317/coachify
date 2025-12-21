@@ -204,18 +204,22 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
   };
 
   const handleNext = async () => {
-    await saveData();
-    
-    if (currentStep < totalSteps) {
-      router.push(`/onboarding/coach/${currentStep + 1}`);
-    } else {
-      if (isPreSignup) {
-        // Redirect to signup page
-        router.push(`/onboarding/coach/${totalSteps + 1}`);
+    try {
+      await saveData();
+      
+      if (currentStep < totalSteps) {
+        router.push(`/onboarding/coach/${currentStep + 1}`);
       } else {
-        await updateUserData(userId, { onboardingCompleted: true });
-        router.push("/app/coach/dashboard");
+        if (isPreSignup) {
+          // Redirect to signup page
+          router.push(`/onboarding/coach/${totalSteps + 1}`);
+        } else {
+          await updateUserData(userId, { onboardingCompleted: true });
+          router.push("/app/coach/dashboard");
+        }
       }
+    } catch (error) {
+      console.error("Error in handleNext:", error);
     }
   };
 

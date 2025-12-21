@@ -109,19 +109,23 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
   };
 
   const handleNext = async () => {
-    await saveData();
-    
-    if (currentStep < totalSteps) {
-      router.push(`/onboarding/student/${currentStep + 1}`);
-    } else {
-      if (isPreSignup) {
-        // Redirect to signup page
-        router.push(`/onboarding/student/${totalSteps + 1}`);
+    try {
+      await saveData();
+      
+      if (currentStep < totalSteps) {
+        router.push(`/onboarding/student/${currentStep + 1}`);
       } else {
-        // Complete onboarding
-        await updateUserData(userId, { onboardingCompleted: true });
-        router.push("/app/student/dashboard");
+        if (isPreSignup) {
+          // Redirect to signup page
+          router.push(`/onboarding/student/${totalSteps + 1}`);
+        } else {
+          // Complete onboarding
+          await updateUserData(userId, { onboardingCompleted: true });
+          router.push("/app/student/dashboard");
+        }
       }
+    } catch (error) {
+      console.error("Error in handleNext:", error);
     }
   };
 
