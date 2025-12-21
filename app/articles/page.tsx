@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { getArticles, getCoachData, type ArticleData } from "@/lib/firebase/firestore";
 import { where, orderBy } from "firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 import { SPORTS } from "@/lib/constants/sports";
 import Link from "next/link";
 import Image from "next/image";
@@ -115,7 +117,10 @@ export default function ArticlesPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
+      
+      <Footer />
     </div>
   );
 }

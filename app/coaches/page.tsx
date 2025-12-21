@@ -6,6 +6,8 @@ import { where, orderBy } from "firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { BadgeVerified } from "@/components/ui/BadgeVerified";
 import { GlowButton } from "@/components/ui/GlowButton";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 import { SPORTS } from "@/lib/constants/sports";
 import Link from "next/link";
 
@@ -53,9 +55,23 @@ export default function CoachesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8">Find a Coach</h1>
+    <div className="min-h-screen bg-[var(--background)]">
+      <Navbar />
+      
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 gradient-mesh opacity-30" />
+      <div className="absolute top-40 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+      
+      <div className="relative z-10 pt-24 pb-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
+              Find Your Perfect Coach
+            </h1>
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+              Connect with verified coaches who can help you reach your goals
+            </p>
+          </div>
 
         <div className="grid md:grid-cols-4 gap-6">
           {/* Filters */}
@@ -175,6 +191,8 @@ export default function CoachesPage() {
           </div>
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 }

@@ -93,14 +93,6 @@ export function Navbar() {
               Find Coaches
             </Link>
             <Link
-              href="/courses"
-              className={`text-sm font-medium transition-colors hover:text-blue-400 ${
-                pathname === "/courses" ? "text-blue-400" : "text-gray-300"
-              }`}
-            >
-              Courses
-            </Link>
-            <Link
               href="/articles"
               className={`text-sm font-medium transition-colors hover:text-blue-400 ${
                 pathname === "/articles" ? "text-blue-400" : "text-gray-300"
