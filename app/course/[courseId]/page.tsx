@@ -135,7 +135,7 @@ export default function CourseDetailPage() {
             </GradientCard>
 
             <GradientCard>
-              <h2 className="text-2xl font-bold mb-4">What you'll learn</h2>
+              <h2 className="text-2xl font-bold mb-4">What you&apos;ll learn</h2>
               <ul className="space-y-2">
                 {course.outcomes.map((outcome: string, i: number) => (
                   <li key={i} className="flex items-start gap-2">

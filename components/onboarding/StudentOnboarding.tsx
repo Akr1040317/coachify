@@ -146,7 +146,7 @@ export function StudentOnboarding({ currentStep, userId }: StudentOnboardingProp
           <GradientCard>
             <h2 className="text-3xl font-bold mb-4">Welcome to Coachify!</h2>
             <p className="text-gray-400 mb-6">
-              We're excited to help you find the perfect coach. Let's get started by learning a bit about you.
+              We&apos;re excited to help you find the perfect coach. Let&apos;s get started by learning a bit about you.
             </p>
             <p className="text-sm text-gray-500">
               This will take about 5 minutes. You can always update your preferences later.
@@ -245,7 +245,7 @@ export function StudentOnboarding({ currentStep, userId }: StudentOnboardingProp
       case 4:
         return (
           <GradientCard>
-            <h2 className="text-2xl font-bold mb-4">What's your skill level?</h2>
+            <h2 className="text-2xl font-bold mb-4">What&apos;s your skill level?</h2>
             <p className="text-gray-400 mb-6 text-sm">For {formData.primarySport || "your primary sport"}</p>
             <div className="space-y-4">
               {SKILL_LEVELS.map((level) => (
@@ -465,9 +465,9 @@ export function StudentOnboarding({ currentStep, userId }: StudentOnboardingProp
       case 8:
         return (
           <GradientCard>
-            <h2 className="text-3xl font-bold mb-4">You're all set! 🎉</h2>
+            <h2 className="text-3xl font-bold mb-4">You&apos;re all set! 🎉</h2>
             <p className="text-gray-400 mb-6">
-              Based on your preferences, we've found some great coaches and courses for you.
+              Based on your preferences, we&apos;ve found some great coaches and courses for you.
             </p>
             <div className="space-y-4">
               <p className="text-sm text-gray-500">

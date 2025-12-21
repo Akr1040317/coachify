@@ -222,7 +222,7 @@ export default function AuthPage() {
 
           {mode === "signin" && (
             <p className="text-center mt-4 text-sm">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <button
                 onClick={() => router.push("/auth?mode=signup")}
                 className="text-blue-400 hover:text-blue-300 underline"

@@ -191,7 +191,7 @@ export function CoachOnboarding({ currentStep, userId }: CoachOnboardingProps) {
           <GradientCard>
             <h2 className="text-3xl font-bold mb-4">Welcome, Coach!</h2>
             <p className="text-gray-400 mb-6">
-              Let's set up your coach profile. This will help students discover you and understand your expertise.
+              Let&apos;s set up your coach profile. This will help students discover you and understand your expertise.
             </p>
           </GradientCard>
         );
@@ -418,7 +418,7 @@ export function CoachOnboarding({ currentStep, userId }: CoachOnboardingProps) {
                   value={formData.coachingPhilosophy}
                   onChange={(e) => setFormData({ ...formData, coachingPhilosophy: e.target.value })}
                   className="w-full px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white min-h-[100px]"
-                  placeholder="What's your approach to coaching?"
+                  placeholder="What&apos;s your approach to coaching?"
                 />
               </div>
             </div>
@@ -496,7 +496,7 @@ export function CoachOnboarding({ currentStep, userId }: CoachOnboardingProps) {
           <GradientCard>
             <h2 className="text-3xl font-bold mb-4">Almost there! 🎉</h2>
             <p className="text-gray-400 mb-6">
-              Your profile is set up and pending verification. Once verified, you'll be visible to students.
+              Your profile is set up and pending verification. Once verified, you&apos;ll be visible to students.
             </p>
             <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
               <p className="text-sm text-blue-400">
