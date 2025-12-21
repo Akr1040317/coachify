@@ -1,10 +1,13 @@
 import { 
   signInWithPopup, 
   GoogleAuthProvider, 
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
   User,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  NextOrObserver
+  NextOrObserver,
+  updateProfile
 } from "firebase/auth";
 import { auth } from "./config";
 
@@ -15,6 +18,35 @@ export const signInWithGoogle = async (): Promise<User> => {
     throw new Error("Firebase Auth is not initialized");
   }
   const result = await signInWithPopup(auth, googleProvider);
+  return result.user;
+};
+
+export const signUpWithEmail = async (
+  email: string, 
+  password: string, 
+  displayName?: string
+): Promise<User> => {
+  if (!auth) {
+    throw new Error("Firebase Auth is not initialized");
+  }
+  const result = await createUserWithEmailAndPassword(auth, email, password);
+  
+  // Update display name if provided
+  if (displayName && result.user) {
+    await updateProfile(result.user, { displayName });
+  }
+  
+  return result.user;
+};
+
+export const signInWithEmail = async (
+  email: string, 
+  password: string
+): Promise<User> => {
+  if (!auth) {
+    throw new Error("Firebase Auth is not initialized");
+  }
+  const result = await signInWithEmailAndPassword(auth, email, password);
   return result.user;
 };
 

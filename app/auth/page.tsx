@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithGoogle, onAuthChange } from "@/lib/firebase/auth";
+import { signInWithGoogle, signUpWithEmail, signInWithEmail, onAuthChange } from "@/lib/firebase/auth";
 import { getUserData, createUserData } from "@/lib/firebase/firestore";
 import { User } from "firebase/auth";
 import { GlowButton } from "@/components/ui/GlowButton";
@@ -19,6 +19,10 @@ function AuthPageContent() {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authMethod, setAuthMethod] = useState<"google" | "email">("google");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -28,8 +32,11 @@ function AuthPageContent() {
           const userData = await getUserData(user.uid);
           
           if (!userData) {
-            // New user - create user data with selected role
-            if (!selectedRole) {
+            // New user (signin without account OR new signup) - create user data with selected role
+            // For signin mode, default to student if no role selected
+            const roleToUse = selectedRole || (mode === "signin" ? "student" : null);
+            
+            if (!roleToUse && mode === "signup") {
               setError("Please select a role");
               setLoading(false);
               return;
@@ -38,14 +45,14 @@ function AuthPageContent() {
             try {
               await createUserData(user.uid, {
                 email: user.email || "",
-                displayName: user.displayName || "",
+                displayName: user.displayName || displayName || "",
                 photoURL: user.photoURL || undefined,
-                role: selectedRole,
+                role: roleToUse || "student",
                 onboardingCompleted: false,
               });
               
               // Redirect to onboarding
-              router.push(`/onboarding/${selectedRole}/1`);
+              router.push(`/onboarding/${roleToUse || "student"}/1`);
             } catch (createError: any) {
               console.error("Error creating user data:", createError);
               if (createError.code === "permission-denied" || createError.message?.includes("permission")) {
@@ -81,7 +88,7 @@ function AuthPageContent() {
     });
 
     return () => unsubscribe();
-  }, [router, selectedRole]);
+  }, [router, selectedRole, mode, displayName]);
 
   const handleAuth = async () => {
     // For signup, require role selection
@@ -90,15 +97,51 @@ function AuthPageContent() {
       return;
     }
 
+    // For email auth, validate fields
+    if (authMethod === "email") {
+      if (!email || !password) {
+        setError("Please enter email and password");
+        return;
+      }
+      if (mode === "signup" && !displayName.trim()) {
+        setError("Please enter your name");
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     
     try {
-      await signInWithGoogle();
+      if (authMethod === "google") {
+        await signInWithGoogle();
+      } else {
+        if (mode === "signup") {
+          await signUpWithEmail(email, password, displayName);
+        } else {
+          await signInWithEmail(email, password);
+        }
+      }
       // onAuthChange will handle the redirect
     } catch (error: any) {
       console.error("Auth error:", error);
-      setError(error.message || "Failed to sign in. Please try again.");
+      let errorMessage = "Failed to authenticate. Please try again.";
+      
+      if (error.code === "auth/email-already-in-use") {
+        errorMessage = "This email is already registered. Please sign in instead.";
+      } else if (error.code === "auth/user-not-found") {
+        errorMessage = "No account found with this email. Please sign up first.";
+      } else if (error.code === "auth/wrong-password") {
+        errorMessage = "Incorrect password. Please try again.";
+      } else if (error.code === "auth/weak-password") {
+        errorMessage = "Password should be at least 6 characters.";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email address.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -202,6 +245,80 @@ function AuthPageContent() {
             </div>
           )}
 
+          {/* Auth Method Toggle */}
+          <div className="mb-6">
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => {
+                  setAuthMethod("google");
+                  setError(null);
+                }}
+                className={`
+                  flex-1 px-4 py-2 rounded-lg border-2 transition-all text-sm
+                  ${authMethod === "google"
+                    ? "border-blue-500 bg-blue-500/10 text-blue-400"
+                    : "border-gray-600 text-gray-400 hover:border-gray-500"
+                  }
+                `}
+              >
+                Google
+              </button>
+              <button
+                onClick={() => {
+                  setAuthMethod("email");
+                  setError(null);
+                }}
+                className={`
+                  flex-1 px-4 py-2 rounded-lg border-2 transition-all text-sm
+                  ${authMethod === "email"
+                    ? "border-blue-500 bg-blue-500/10 text-blue-400"
+                    : "border-gray-600 text-gray-400 hover:border-gray-500"
+                  }
+                `}
+              >
+                Email
+              </button>
+            </div>
+
+            {/* Email/Password Form */}
+            {authMethod === "email" && (
+              <div className="space-y-4">
+                {mode === "signup" && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Name</label>
+                    <input
+                      type="text"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="Enter your name"
+                      className="w-full px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    className="w-full px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           {error && (
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
               {error}
@@ -213,11 +330,15 @@ function AuthPageContent() {
             size="lg"
             className="w-full"
             onClick={handleAuth}
-            disabled={loading || (mode === "signup" && !selectedRole)}
+            disabled={loading || (mode === "signup" && !selectedRole) || (authMethod === "email" && (!email || !password || (mode === "signup" && !displayName)))}
           >
             {loading 
               ? (mode === "signup" ? "Creating account..." : "Signing in...") 
-              : "Continue with Google"}
+              : authMethod === "google" 
+                ? "Continue with Google"
+                : mode === "signup"
+                  ? "Create Account"
+                  : "Sign In"}
           </GlowButton>
 
           {mode === "signin" && (
