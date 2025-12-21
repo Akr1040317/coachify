@@ -112,10 +112,11 @@ export default function CoachVideosPage() {
 
   const handleDelete = async (videoId: string) => {
     if (!confirm("Are you sure you want to delete this video?")) return;
+    if (!db || !user) return;
 
     try {
       await deleteDoc(doc(db, "videos", videoId));
-      await loadVideos(user!.uid);
+      await loadVideos(user.uid);
     } catch (error) {
       console.error("Error deleting video:", error);
       alert("Failed to delete video");
