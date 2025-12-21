@@ -302,7 +302,7 @@ export default function StudentDetailPage() {
                       <div className="mb-3">
                         <div className="text-sm font-semibold mb-1">Drills:</div>
                         <ul className="list-disc list-inside text-sm text-gray-400">
-                          {note.drills.map((drill, i) => (
+                          {note.drills.map((drill: string, i: number) => (
                             <li key={i}>{drill}</li>
                           ))}
                         </ul>

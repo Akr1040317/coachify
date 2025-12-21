@@ -118,11 +118,11 @@ export default function NewBookingPage() {
     );
   }
 
-  const price30 = coach.sessionOffers?.paid?.find(p => p.minutes === 30)?.priceCents 
-    ? coach.sessionOffers.paid.find(p => p.minutes === 30)!.priceCents / 100 
+  const price30 = coach.sessionOffers?.paid?.find((p: { minutes: number; priceCents: number }) => p.minutes === 30)?.priceCents 
+    ? coach.sessionOffers.paid.find((p: { minutes: number; priceCents: number }) => p.minutes === 30)!.priceCents / 100 
     : 0;
-  const price60 = coach.sessionOffers?.paid?.find(p => p.minutes === 60)?.priceCents 
-    ? coach.sessionOffers.paid.find(p => p.minutes === 60)!.priceCents / 100 
+  const price60 = coach.sessionOffers?.paid?.find((p: { minutes: number; priceCents: number }) => p.minutes === 60)?.priceCents 
+    ? coach.sessionOffers.paid.find((p: { minutes: number; priceCents: number }) => p.minutes === 60)!.priceCents / 100 
     : 0;
 
   return (

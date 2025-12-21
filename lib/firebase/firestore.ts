@@ -85,6 +85,7 @@ export interface CoachData {
 
 // User operations
 export const getUserData = async (uid: string): Promise<UserData | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "users", uid);
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
@@ -94,6 +95,7 @@ export const getUserData = async (uid: string): Promise<UserData | null> => {
 };
 
 export const createUserData = async (uid: string, data: Partial<UserData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "users", uid);
   await setDoc(docRef, {
     ...data,
@@ -103,12 +105,14 @@ export const createUserData = async (uid: string, data: Partial<UserData>): Prom
 };
 
 export const updateUserData = async (uid: string, data: Partial<UserData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "users", uid);
   await updateDoc(docRef, data);
 };
 
 // Student operations
 export const getStudentData = async (uid: string): Promise<StudentData | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "students", uid);
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
@@ -118,6 +122,7 @@ export const getStudentData = async (uid: string): Promise<StudentData | null> =
 };
 
 export const createStudentData = async (uid: string, data: Partial<StudentData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "students", uid);
   await setDoc(docRef, {
     ...data,
@@ -127,6 +132,7 @@ export const createStudentData = async (uid: string, data: Partial<StudentData>)
 };
 
 export const updateStudentData = async (uid: string, data: Partial<StudentData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "students", uid);
   await updateDoc(docRef, {
     ...data,
@@ -136,6 +142,7 @@ export const updateStudentData = async (uid: string, data: Partial<StudentData>)
 
 // Coach operations
 export const getCoachData = async (coachId: string): Promise<CoachData | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "coaches", coachId);
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
@@ -145,6 +152,7 @@ export const getCoachData = async (coachId: string): Promise<CoachData | null> =
 };
 
 export const createCoachData = async (coachId: string, data: Partial<CoachData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "coaches", coachId);
   await setDoc(docRef, {
     ...data,
@@ -154,6 +162,7 @@ export const createCoachData = async (coachId: string, data: Partial<CoachData>)
 };
 
 export const updateCoachData = async (coachId: string, data: Partial<CoachData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "coaches", coachId);
   await updateDoc(docRef, {
     ...data,
@@ -162,6 +171,7 @@ export const updateCoachData = async (coachId: string, data: Partial<CoachData>)
 };
 
 export const getCoaches = async (constraints: QueryConstraint[] = []): Promise<CoachData[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "coaches"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => doc.data() as CoachData);
@@ -194,6 +204,7 @@ export interface LessonData {
 }
 
 export const getCourse = async (courseId: string): Promise<CourseData | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "courses", courseId);
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
@@ -203,12 +214,14 @@ export const getCourse = async (courseId: string): Promise<CourseData | null> =>
 };
 
 export const getCourses = async (constraints: QueryConstraint[] = []): Promise<(CourseData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "courses"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CourseData & { id: string }));
 };
 
 export const createCourse = async (data: Partial<CourseData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = await addDoc(collection(db, "courses"), {
     ...data,
     createdAt: serverTimestamp(),
@@ -218,6 +231,7 @@ export const createCourse = async (data: Partial<CourseData>): Promise<string> =
 };
 
 export const updateCourse = async (courseId: string, data: Partial<CourseData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "courses", courseId);
   await updateDoc(docRef, {
     ...data,
@@ -226,12 +240,14 @@ export const updateCourse = async (courseId: string, data: Partial<CourseData>):
 };
 
 export const getCourseLessons = async (courseId: string): Promise<(LessonData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "courses", courseId, "lessons"), orderBy("order"));
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LessonData & { id: string }));
 };
 
 export const addCourseLesson = async (courseId: string, data: Partial<LessonData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = await addDoc(collection(db, "courses", courseId, "lessons"), {
     ...data,
     createdAt: serverTimestamp(),
@@ -256,6 +272,7 @@ export interface VideoData {
 }
 
 export const getVideo = async (videoId: string): Promise<(VideoData & { id: string }) | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "videos", videoId);
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
@@ -265,12 +282,14 @@ export const getVideo = async (videoId: string): Promise<(VideoData & { id: stri
 };
 
 export const getVideos = async (constraints: QueryConstraint[] = []): Promise<(VideoData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "videos"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as VideoData & { id: string }));
 };
 
 export const createVideo = async (data: Partial<VideoData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = await addDoc(collection(db, "videos"), {
     ...data,
     createdAt: serverTimestamp(),
@@ -280,6 +299,7 @@ export const createVideo = async (data: Partial<VideoData>): Promise<string> => 
 };
 
 export const updateVideo = async (videoId: string, data: Partial<VideoData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "videos", videoId);
   await updateDoc(docRef, {
     ...data,
@@ -304,6 +324,7 @@ export interface ArticleData {
 }
 
 export const getArticle = async (articleId: string): Promise<(ArticleData & { id: string }) | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "articles", articleId);
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
@@ -313,12 +334,14 @@ export const getArticle = async (articleId: string): Promise<(ArticleData & { id
 };
 
 export const getArticles = async (constraints: QueryConstraint[] = []): Promise<(ArticleData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "articles"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ArticleData & { id: string }));
 };
 
 export const createArticle = async (data: Partial<ArticleData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = await addDoc(collection(db, "articles"), {
     ...data,
     createdAt: serverTimestamp(),
@@ -328,6 +351,7 @@ export const createArticle = async (data: Partial<ArticleData>): Promise<string>
 };
 
 export const updateArticle = async (articleId: string, data: Partial<ArticleData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "articles", articleId);
   await updateDoc(docRef, {
     ...data,
@@ -353,6 +377,7 @@ export interface BookingData {
 }
 
 export const getBooking = async (bookingId: string): Promise<(BookingData & { id: string }) | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "bookings", bookingId);
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
@@ -362,12 +387,14 @@ export const getBooking = async (bookingId: string): Promise<(BookingData & { id
 };
 
 export const getBookings = async (constraints: QueryConstraint[] = []): Promise<(BookingData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "bookings"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BookingData & { id: string }));
 };
 
 export const createBooking = async (data: Partial<BookingData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = await addDoc(collection(db, "bookings"), {
     ...data,
     createdAt: serverTimestamp(),
@@ -377,6 +404,7 @@ export const createBooking = async (data: Partial<BookingData>): Promise<string>
 };
 
 export const updateBooking = async (bookingId: string, data: Partial<BookingData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "bookings", bookingId);
   await updateDoc(docRef, {
     ...data,
@@ -399,6 +427,7 @@ export interface PurchaseData {
 }
 
 export const createPurchase = async (data: Partial<PurchaseData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = await addDoc(collection(db, "purchases"), {
     ...data,
     createdAt: serverTimestamp(),
@@ -407,6 +436,7 @@ export const createPurchase = async (data: Partial<PurchaseData>): Promise<strin
 };
 
 export const getPurchases = async (constraints: QueryConstraint[] = []): Promise<(PurchaseData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "purchases"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseData & { id: string }));
@@ -421,6 +451,7 @@ export interface EnrollmentData {
 }
 
 export const getEnrollment = async (userId: string, courseId: string): Promise<(EnrollmentData & { id: string }) | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(
     collection(db, "enrollments"),
     where("userId", "==", userId),
@@ -435,12 +466,14 @@ export const getEnrollment = async (userId: string, courseId: string): Promise<(
 };
 
 export const getEnrollments = async (constraints: QueryConstraint[] = []): Promise<(EnrollmentData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "enrollments"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as EnrollmentData & { id: string }));
 };
 
 export const createEnrollment = async (data: Partial<EnrollmentData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = await addDoc(collection(db, "enrollments"), {
     ...data,
     purchasedAt: serverTimestamp(),
@@ -449,6 +482,7 @@ export const createEnrollment = async (data: Partial<EnrollmentData>): Promise<s
 };
 
 export const updateEnrollment = async (enrollmentId: string, progress: { [lessonId: string]: boolean }): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "enrollments", enrollmentId);
   await updateDoc(docRef, { progress });
 };
@@ -468,6 +502,7 @@ export interface CoachStudentNoteData {
 }
 
 export const createCoachNote = async (data: Partial<CoachStudentNoteData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = await addDoc(collection(db, "coachStudentNotes"), {
     ...data,
     createdAt: serverTimestamp(),
@@ -476,6 +511,7 @@ export const createCoachNote = async (data: Partial<CoachStudentNoteData>): Prom
 };
 
 export const getCoachNotes = async (constraints: QueryConstraint[] = []): Promise<(CoachStudentNoteData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "coachStudentNotes"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CoachStudentNoteData & { id: string }));
@@ -492,6 +528,7 @@ export interface ReviewData {
 }
 
 export const createReview = async (data: Partial<ReviewData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const docRef = await addDoc(collection(db, "reviews"), {
     ...data,
     createdAt: serverTimestamp(),
@@ -500,6 +537,7 @@ export const createReview = async (data: Partial<ReviewData>): Promise<string> =
 };
 
 export const getReviews = async (constraints: QueryConstraint[] = []): Promise<(ReviewData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "reviews"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReviewData & { id: string }));

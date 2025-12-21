@@ -85,6 +85,7 @@ export function CoachOnboarding({ currentStep, userId }: CoachOnboardingProps) {
   }, [userId]);
 
   const uploadFile = async (file: File, path: string): Promise<string> => {
+    if (!storage) throw new Error("Storage is not initialized");
     const storageRef = ref(storage, path);
     await uploadBytes(storageRef, file);
     return getDownloadURL(storageRef);

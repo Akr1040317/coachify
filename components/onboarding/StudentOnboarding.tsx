@@ -116,12 +116,12 @@ export function StudentOnboarding({ currentStep, userId }: StudentOnboardingProp
     }
   };
 
-  const canGoNext = () => {
+  const canGoNext = (): boolean => {
     switch (currentStep) {
       case 1:
         return true;
       case 2:
-        return formData.age > 0 && (formData.age >= 16 || (formData.guardianName && formData.guardianEmail && formData.guardianConsent));
+        return formData.age > 0 && (formData.age >= 16 || (!!formData.guardianName && !!formData.guardianEmail && !!formData.guardianConsent));
       case 3:
         return formData.sports.length > 0;
       case 4:

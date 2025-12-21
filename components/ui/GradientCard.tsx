@@ -8,6 +8,7 @@ interface GradientCardProps {
   className?: string;
   gradient?: "blue-purple" | "orange" | "none";
   glow?: boolean;
+  onClick?: () => void;
 }
 
 export function GradientCard({
@@ -15,6 +16,7 @@ export function GradientCard({
   className = "",
   gradient = "blue-purple",
   glow = false,
+  onClick,
 }: GradientCardProps) {
   const gradientClasses = {
     "blue-purple": "bg-gradient-to-br from-blue-500/10 to-purple-500/10",
@@ -31,11 +33,13 @@ export function GradientCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
+      onClick={onClick}
       className={`
         rounded-xl border border-[var(--card-border)] p-6
         ${gradientClasses[gradient]}
         ${glowClasses}
         transition-all duration-300
+        ${onClick ? "cursor-pointer" : ""}
         ${className}
       `}
     >
