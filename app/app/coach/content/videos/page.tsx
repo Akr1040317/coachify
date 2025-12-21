@@ -62,7 +62,7 @@ export default function CoachVideosPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !formData.videoFile) return;
+    if (!user || !formData.videoFile || !storage) return;
 
     try {
       // Upload video

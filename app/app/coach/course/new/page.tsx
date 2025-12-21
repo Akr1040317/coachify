@@ -40,7 +40,7 @@ export default function NewCoursePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !storage) return;
 
     try {
       let thumbnailUrl = "";
