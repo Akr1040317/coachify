@@ -9,6 +9,28 @@ import { GlowButton } from "@/components/ui/GlowButton";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { motion } from "framer-motion";
 
+// Google Icon SVG Component
+const GoogleIcon = () => (
+  <svg className="w-5 h-5" viewBox="0 0 24 24">
+    <path
+      fill="currentColor"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <path
+      fill="currentColor"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <path
+      fill="currentColor"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+    />
+    <path
+      fill="currentColor"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+    />
+  </svg>
+);
+
 function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -19,7 +41,6 @@ function AuthPageContent() {
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [authMethod, setAuthMethod] = useState<"google" | "email">("google");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -90,37 +111,31 @@ function AuthPageContent() {
     return () => unsubscribe();
   }, [router, selectedRole, mode, displayName]);
 
-  const handleAuth = async () => {
+  const handleEmailAuth = async () => {
     // For signup, require role selection
     if (mode === "signup" && !selectedRole) {
       setError("Please select a role first");
       return;
     }
 
-    // For email auth, validate fields
-    if (authMethod === "email") {
-      if (!email || !password) {
-        setError("Please enter email and password");
-        return;
-      }
-      if (mode === "signup" && !displayName.trim()) {
-        setError("Please enter your name");
-        return;
-      }
+    // Validate fields
+    if (!email || !password) {
+      setError("Please enter email and password");
+      return;
+    }
+    if (mode === "signup" && !displayName.trim()) {
+      setError("Please enter your name");
+      return;
     }
 
     setLoading(true);
     setError(null);
     
     try {
-      if (authMethod === "google") {
-        await signInWithGoogle();
+      if (mode === "signup") {
+        await signUpWithEmail(email, password, displayName);
       } else {
-        if (mode === "signup") {
-          await signUpWithEmail(email, password, displayName);
-        } else {
-          await signInWithEmail(email, password);
-        }
+        await signInWithEmail(email, password);
       }
       // onAuthChange will handle the redirect
     } catch (error: any) {
@@ -146,46 +161,70 @@ function AuthPageContent() {
     }
   };
 
+  const handleGoogleAuth = async () => {
+    // For signup, require role selection
+    if (mode === "signup" && !selectedRole) {
+      setError("Please select a role first");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    
+    try {
+      await signInWithGoogle();
+      // onAuthChange will handle the redirect
+    } catch (error: any) {
+      console.error("Auth error:", error);
+      setError(error.message || "Failed to sign in with Google. Please try again.");
+      setLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[var(--background)] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[var(--background)] flex items-center justify-center px-4 py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
         className="w-full max-w-md"
       >
-        <GradientCard gradient="blue-purple" glow>
-          <h1 className="text-3xl font-bold text-center mb-2">
-            {mode === "signup" ? "Create an Account" : "Sign In"}
-          </h1>
-          <p className="text-gray-400 text-center mb-8">
-            {mode === "signup" 
-              ? "Choose your role and get started" 
-              : "Welcome back to Coachify"}
-          </p>
+        <GradientCard gradient="blue-purple" glow className="p-8">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold mb-2">
+              {mode === "signup" ? "Create an Account" : "Welcome Back"}
+            </h1>
+            <p className="text-gray-400">
+              {mode === "signup" 
+                ? "Get started with Coachify" 
+                : "Sign in to your account"}
+            </p>
+          </div>
 
-          {/* Role Selection - Required for signup, optional for signin */}
+          {/* Role Selection - Required for signup */}
           {mode === "signup" && (
             <div className="mb-6">
-              <label className="block text-sm font-medium mb-3">
+              <label className="block text-sm font-medium mb-3 text-gray-300">
                 I want to:
               </label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => {
                     setSelectedRole("student");
                     setError(null);
                   }}
                   className={`
-                    p-4 rounded-lg border-2 transition-all
+                    p-4 rounded-xl border-2 transition-all duration-200
                     ${selectedRole === "student"
-                      ? "border-blue-500 bg-blue-500/10"
-                      : "border-gray-600 hover:border-gray-500"
+                      ? "border-blue-500 bg-blue-500/20 shadow-lg shadow-blue-500/20"
+                      : "border-gray-600 hover:border-gray-500 bg-[var(--card)]"
                     }
                   `}
                 >
                   <div className="text-2xl mb-2">👨‍🎓</div>
-                  <div className="font-semibold">Learn</div>
-                  <div className="text-xs text-gray-400">As a Student</div>
+                  <div className="font-semibold text-sm">Learn</div>
+                  <div className="text-xs text-gray-400 mt-1">As a Student</div>
                 </button>
                 <button
                   onClick={() => {
@@ -193,130 +232,70 @@ function AuthPageContent() {
                     setError(null);
                   }}
                   className={`
-                    p-4 rounded-lg border-2 transition-all
+                    p-4 rounded-xl border-2 transition-all duration-200
                     ${selectedRole === "coach"
-                      ? "border-blue-500 bg-blue-500/10"
-                      : "border-gray-600 hover:border-gray-500"
+                      ? "border-blue-500 bg-blue-500/20 shadow-lg shadow-blue-500/20"
+                      : "border-gray-600 hover:border-gray-500 bg-[var(--card)]"
                     }
                   `}
                 >
                   <div className="text-2xl mb-2">🏋️</div>
-                  <div className="font-semibold">Teach</div>
-                  <div className="text-xs text-gray-400">As a Coach</div>
+                  <div className="font-semibold text-sm">Teach</div>
+                  <div className="text-xs text-gray-400 mt-1">As a Coach</div>
                 </button>
               </div>
             </div>
           )}
 
-          {/* Role Selection for signin (optional) */}
-          {mode === "signin" && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-3 text-gray-400">
-                Sign in as (optional):
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => setSelectedRole("student")}
-                  className={`
-                    p-3 rounded-lg border-2 transition-all text-sm
-                    ${selectedRole === "student"
-                      ? "border-blue-500 bg-blue-500/10"
-                      : "border-gray-600 hover:border-gray-500"
-                    }
-                  `}
-                >
-                  <div className="text-xl mb-1">👨‍🎓</div>
-                  <div className="font-semibold">Student</div>
-                </button>
-                <button
-                  onClick={() => setSelectedRole("coach")}
-                  className={`
-                    p-3 rounded-lg border-2 transition-all text-sm
-                    ${selectedRole === "coach"
-                      ? "border-blue-500 bg-blue-500/10"
-                      : "border-gray-600 hover:border-gray-500"
-                    }
-                  `}
-                >
-                  <div className="text-xl mb-1">🏋️</div>
-                  <div className="font-semibold">Coach</div>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Auth Method Toggle */}
-          <div className="mb-6">
-            <div className="flex gap-2 mb-4">
-              <button
-                onClick={() => {
-                  setAuthMethod("google");
-                  setError(null);
-                }}
-                className={`
-                  flex-1 px-4 py-2 rounded-lg border-2 transition-all text-sm
-                  ${authMethod === "google"
-                    ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                    : "border-gray-600 text-gray-400 hover:border-gray-500"
-                  }
-                `}
-              >
-                Google
-              </button>
-              <button
-                onClick={() => {
-                  setAuthMethod("email");
-                  setError(null);
-                }}
-                className={`
-                  flex-1 px-4 py-2 rounded-lg border-2 transition-all text-sm
-                  ${authMethod === "email"
-                    ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                    : "border-gray-600 text-gray-400 hover:border-gray-500"
-                  }
-                `}
-              >
-                Email
-              </button>
-            </div>
-
-            {/* Email/Password Form */}
-            {authMethod === "email" && (
-              <div className="space-y-4">
-                {mode === "signup" && (
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Name</label>
-                    <input
-                      type="text"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="Enter your name"
-                      className="w-full px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                    className="w-full px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">Password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="w-full px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
-                  />
-                </div>
+          {/* Email/Password Form */}
+          <div className="space-y-4 mb-6">
+            {mode === "signup" && (
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-300">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="John Doe"
+                  className="w-full px-4 py-3 bg-[var(--card)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleEmailAuth();
+                  }}
+                />
               </div>
             )}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-300">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full px-4 py-3 bg-[var(--card)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleEmailAuth();
+                }}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-300">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 bg-[var(--card)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleEmailAuth();
+                }}
+              />
+            </div>
           </div>
 
           {error && (
@@ -325,48 +304,79 @@ function AuthPageContent() {
             </div>
           )}
 
+          {/* Primary Email/Password Button */}
           <GlowButton
             variant="primary"
             size="lg"
-            className="w-full"
-            onClick={handleAuth}
-            disabled={loading || (mode === "signup" && !selectedRole) || (authMethod === "email" && (!email || !password || (mode === "signup" && !displayName)))}
+            className="w-full mb-4"
+            onClick={handleEmailAuth}
+            disabled={loading || (mode === "signup" && !selectedRole) || !email || !password || (mode === "signup" && !displayName)}
           >
             {loading 
               ? (mode === "signup" ? "Creating account..." : "Signing in...") 
-              : authMethod === "google" 
-                ? "Continue with Google"
-                : mode === "signup"
-                  ? "Create Account"
-                  : "Sign In"}
+              : mode === "signup"
+                ? "Create Account"
+                : "Sign In"}
           </GlowButton>
 
-          {mode === "signin" && (
-            <p className="text-center mt-4 text-sm">
-              Don&apos;t have an account?{" "}
-              <button
-                onClick={() => router.push("/auth?mode=signup")}
-                className="text-blue-400 hover:text-blue-300 underline"
-              >
-                Sign up
-              </button>
-            </p>
-          )}
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-600"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-[var(--card)] text-gray-400">Or continue with</span>
+            </div>
+          </div>
 
-          {mode === "signup" && (
-            <p className="text-center mt-4 text-sm">
-              Already have an account?{" "}
-              <button
-                onClick={() => router.push("/auth?mode=signin")}
-                className="text-blue-400 hover:text-blue-300 underline"
-              >
-                Sign in
-              </button>
-            </p>
-          )}
+          {/* Google Sign In Button */}
+          <button
+            onClick={handleGoogleAuth}
+            disabled={loading || (mode === "signup" && !selectedRole)}
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--card)] border border-gray-600 rounded-lg text-white hover:bg-gray-700/50 hover:border-gray-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <GoogleIcon />
+            <span className="font-medium">
+              {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
+            </span>
+          </button>
 
-          <p className="text-xs text-gray-500 text-center mt-4">
-            By continuing, you agree to our Terms and Privacy Policy
+          {/* Toggle between signin/signup */}
+          <div className="mt-6 text-center">
+            {mode === "signin" ? (
+              <p className="text-sm text-gray-400">
+                Don&apos;t have an account?{" "}
+                <button
+                  onClick={() => {
+                    router.push("/auth?mode=signup");
+                    setError(null);
+                  }}
+                  className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                >
+                  Sign up
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-gray-400">
+                Already have an account?{" "}
+                <button
+                  onClick={() => {
+                    router.push("/auth?mode=signin");
+                    setError(null);
+                  }}
+                  className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                >
+                  Sign in
+                </button>
+              </p>
+            )}
+          </div>
+
+          {/* Terms */}
+          <p className="text-xs text-gray-500 text-center mt-6">
+            By continuing, you agree to our{" "}
+            <a href="#" className="text-blue-400 hover:underline">Terms</a> and{" "}
+            <a href="#" className="text-blue-400 hover:underline">Privacy Policy</a>
           </p>
         </GradientCard>
       </motion.div>
