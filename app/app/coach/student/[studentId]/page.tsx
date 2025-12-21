@@ -280,18 +280,21 @@ export default function StudentDetailPage() {
                       <div className="mb-3">
                         <div className="text-sm font-semibold mb-1">Skill Ratings:</div>
                         <div className="space-y-1">
-                          {Object.entries(note.skillRatings).map(([area, rating]) => (
-                            <div key={area} className="flex items-center justify-between text-sm">
-                              <span className="text-gray-400">{area}</span>
-                              <div className="flex">
-                                {[...Array(5)].map((_, i) => (
-                                  <span key={i} className={i < rating ? "text-yellow-400" : "text-gray-600"}>
-                                    ⭐
-                                  </span>
-                                ))}
+                          {Object.entries(note.skillRatings).map(([area, rating]) => {
+                            const ratingValue = typeof rating === 'number' ? rating : 0;
+                            return (
+                              <div key={area} className="flex items-center justify-between text-sm">
+                                <span className="text-gray-400">{area}</span>
+                                <div className="flex">
+                                  {[...Array(5)].map((_, i) => (
+                                    <span key={i} className={i < ratingValue ? "text-yellow-400" : "text-gray-600"}>
+                                      ⭐
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
