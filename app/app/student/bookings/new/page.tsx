@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
@@ -9,7 +9,7 @@ import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { BadgeVerified } from "@/components/ui/BadgeVerified";
 
-export default function NewBookingPage() {
+function NewBookingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const coachId = searchParams.get("coachId");
@@ -231,5 +231,17 @@ export default function NewBookingPage() {
         </GradientCard>
       </div>
     </div>
+  );
+}
+
+export default function NewBookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    }>
+      <NewBookingPageContent />
+    </Suspense>
   );
 }

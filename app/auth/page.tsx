@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signInWithGoogle, onAuthChange } from "@/lib/firebase/auth";
 import { getUserData, createUserData } from "@/lib/firebase/firestore";
@@ -9,7 +9,7 @@ import { GlowButton } from "@/components/ui/GlowButton";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { motion } from "framer-motion";
 
-export default function AuthPage() {
+function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mode = searchParams.get("mode") || "signup"; // signup or signin
@@ -250,5 +250,17 @@ export default function AuthPage() {
         </GradientCard>
       </motion.div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    }>
+      <AuthPageContent />
+    </Suspense>
   );
 }
