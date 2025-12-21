@@ -24,7 +24,7 @@ export function WizardStepShell({
   const progress = (currentStep / totalSteps) * 100;
 
   return (
-    <div className={`min-h-screen bg-[var(--background)] ${className}`}>
+    <div className={`w-full ${className}`}>
       {/* Progress bar */}
       <div className="w-full h-1 bg-gray-800">
         <div
@@ -33,7 +33,7 @@ export function WizardStepShell({
         />
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-12">
         {/* Step indicator */}
         <div className="mb-8 text-center">
           <span className="text-sm text-gray-400">
@@ -50,7 +50,7 @@ export function WizardStepShell({
             onClick={onBack}
             disabled={currentStep === 1}
             className={`
-              px-6 py-3 rounded-lg border border-gray-600
+              px-6 py-3 rounded-lg border border-gray-600 text-white
               transition-all duration-200
               ${currentStep === 1
                 ? "opacity-50 cursor-not-allowed"
@@ -69,7 +69,6 @@ export function WizardStepShell({
               bg-gradient-to-r from-orange-500 to-orange-600
               text-white font-semibold
               transition-all duration-200
-              shadow-glow-orange
               ${!canGoNext
                 ? "opacity-50 cursor-not-allowed"
                 : "hover:shadow-xl hover:scale-105"

@@ -5,6 +5,8 @@ import { useState, useEffect, Suspense } from "react";
 import { StudentOnboarding } from "@/components/onboarding/StudentOnboarding";
 import { CoachOnboarding } from "@/components/onboarding/CoachOnboarding";
 import { OnboardingSignup } from "@/components/onboarding/OnboardingSignup";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 
 function OnboardingPageContent() {
   const params = useParams();
@@ -30,7 +32,7 @@ function OnboardingPageContent() {
     }
   }, [role, router]);
 
-  // If it's the last step (step 9 for student, step 8 for coach), show signup
+  // If it's the last step (step 9 for student, step 9 for coach), show signup
   const totalSteps = role === "student" ? 8 : 8;
   const isSignupStep = step > totalSteps;
 
@@ -44,13 +46,25 @@ function OnboardingPageContent() {
     sessionStorage.setItem(`tempUserId_${role}`, tempUserId);
   }
 
-  if (role === "student") {
-    return <StudentOnboarding currentStep={step} userId={tempUserId} isPreSignup={true} />;
-  } else if (role === "coach") {
-    return <CoachOnboarding currentStep={step} userId={tempUserId} isPreSignup={true} />;
-  }
-
-  return null;
+  return (
+    <div className="min-h-screen bg-[var(--background)]">
+      <Navbar />
+      
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 gradient-mesh opacity-30" />
+      <div className="absolute top-40 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+      
+      <div className="relative z-10">
+        {role === "student" ? (
+          <StudentOnboarding currentStep={step} userId={tempUserId} isPreSignup={true} />
+        ) : (
+          <CoachOnboarding currentStep={step} userId={tempUserId} isPreSignup={true} />
+        )}
+      </div>
+      
+      <Footer />
+    </div>
+  );
 }
 
 export default function OnboardingPage() {

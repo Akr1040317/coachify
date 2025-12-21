@@ -131,16 +131,16 @@ export function Navbar() {
                 </GlowButton>
               </Link>
             ) : (
-              // Show sign in/up if no user, or if user exists but no role (permission error or new user)
+              // Show Get Started and Sign In if no user
               <>
+                <Link href="/get-started">
+                  <GlowButton variant="primary" size="sm">
+                    Get Started
+                  </GlowButton>
+                </Link>
                 <Link href="/auth?mode=signin">
                   <GlowButton variant="secondary" size="sm">
                     Sign In
-                  </GlowButton>
-                </Link>
-                <Link href="/auth?mode=signup">
-                  <GlowButton variant="primary" size="sm">
-                    Sign Up
                   </GlowButton>
                 </Link>
               </>
