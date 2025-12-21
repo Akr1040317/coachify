@@ -52,14 +52,14 @@ export function Hero() {
           transition={{ duration: 0.8, delay: 0.4 }}
           className="flex flex-col sm:flex-row gap-4 justify-center items-center"
         >
-          <Link href="/auth?mode=signup&role=student">
+          <Link href="/get-started">
             <GlowButton variant="primary" size="lg" glowColor="orange">
-              Find a Coach
+              Get Started
             </GlowButton>
           </Link>
-          <Link href="/auth?mode=signup&role=coach">
+          <Link href="/auth?mode=signin">
             <GlowButton variant="secondary" size="lg">
-              Become a Coach
+              Sign In
             </GlowButton>
           </Link>
         </motion.div>

@@ -14,9 +14,10 @@ import { storage } from "@/lib/firebase/config";
 interface CoachOnboardingProps {
   currentStep: number;
   userId: string;
+  isPreSignup?: boolean;
 }
 
-export function CoachOnboarding({ currentStep, userId }: CoachOnboardingProps) {
+export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: CoachOnboardingProps) {
   const router = useRouter();
   const [formData, setFormData] = useState({
     fullName: "",
@@ -95,6 +96,53 @@ export function CoachOnboarding({ currentStep, userId }: CoachOnboardingProps) {
     let avatarUrl = formData.profilePhotoUrl;
     let introVideoUrl = formData.introVideoUrl;
 
+    // For pre-signup, we'll store file references and upload after signup
+    if (isPreSignup) {
+      const coachData = {
+        userId,
+        displayName: formData.fullName,
+        headline: formData.headline,
+        bio: formData.bio,
+        timezone: formData.timezone,
+        location: formData.location,
+        sports: formData.sports,
+        specialtiesBySport: formData.specialtiesBySport,
+        experienceType: formData.experienceType,
+        credentials: formData.credentials.split("\n").filter(c => c.trim()),
+        socialLinks: {
+          linkedin: formData.linkedin || undefined,
+          youtube: formData.youtube || undefined,
+          instagram: formData.instagram || undefined,
+        },
+        avatarUrl: avatarUrl || "",
+        introVideoUrl: introVideoUrl || "",
+        introVideoThumbnailUrl: "",
+        coachingPhilosophy: formData.coachingPhilosophy,
+        isVerified: false,
+        status: "pending_verification" as const,
+        sessionOffers: {
+          freeIntroEnabled: formData.freeIntroEnabled,
+          freeIntroMinutes: formData.freeIntroMinutes,
+          paid: [
+            { minutes: 30, priceCents: formData.price30Min * 100, currency: "USD" },
+            { minutes: 60, priceCents: formData.price60Min * 100, currency: "USD" },
+          ],
+        },
+        ratingAvg: 0,
+        ratingCount: 0,
+        // Store file references for upload after signup
+        profilePhotoFile: formData.profilePhoto ? await fileToBase64(formData.profilePhoto) : null,
+        introVideoFile: formData.introVideo ? await fileToBase64(formData.introVideo) : null,
+      };
+
+      sessionStorage.setItem(`onboardingData_coach`, JSON.stringify({
+        coachData,
+        role: "coach"
+      }));
+      return;
+    }
+
+    // Normal flow - upload files and save to Firestore
     if (formData.profilePhoto) {
       avatarUrl = await uploadFile(formData.profilePhoto, `coaches/${userId}/avatar`);
     }
@@ -145,14 +193,29 @@ export function CoachOnboarding({ currentStep, userId }: CoachOnboardingProps) {
     }
   };
 
+  // Helper to convert file to base64 for storage
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const handleNext = async () => {
     await saveData();
     
     if (currentStep < totalSteps) {
       router.push(`/onboarding/coach/${currentStep + 1}`);
     } else {
-      await updateUserData(userId, { onboardingCompleted: true });
-      router.push("/app/coach/dashboard");
+      if (isPreSignup) {
+        // Redirect to signup page
+        router.push(`/onboarding/coach/${totalSteps + 1}`);
+      } else {
+        await updateUserData(userId, { onboardingCompleted: true });
+        router.push("/app/coach/dashboard");
+      }
     }
   };
 

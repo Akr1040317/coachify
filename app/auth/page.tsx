@@ -54,27 +54,27 @@ function AuthPageContent() {
           const userData = await getUserData(user.uid);
           
           if (!userData) {
-            // New user (signin without account OR new signup) - create user data with selected role
-            // For signin mode, default to student if no role selected
-            const roleToUse = selectedRole || (mode === "signin" ? "student" : null);
-            
-            if (!roleToUse && mode === "signup") {
-              setError("Please select a role");
+            // New user signing in - redirect to get-started
+            if (mode === "signin") {
+              router.push("/get-started");
               setLoading(false);
               return;
             }
+            
+            // New user signing up directly (shouldn't happen often, but handle it)
+            const roleToUse = selectedRole || "student";
             
             try {
               await createUserData(user.uid, {
                 email: user.email || "",
                 displayName: user.displayName || displayName || "",
                 photoURL: user.photoURL || undefined,
-                role: roleToUse || "student",
+                role: roleToUse,
                 onboardingCompleted: false,
               });
               
               // Redirect to onboarding
-              router.push(`/onboarding/${roleToUse || "student"}/1`);
+              router.push(`/onboarding/${roleToUse}/1`);
             } catch (createError: any) {
               console.error("Error creating user data:", createError);
               if (createError.code === "permission-denied" || createError.message?.includes("permission")) {

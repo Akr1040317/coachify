@@ -13,9 +13,10 @@ import { updateUserData } from "@/lib/firebase/firestore";
 interface StudentOnboardingProps {
   currentStep: number;
   userId: string;
+  isPreSignup?: boolean;
 }
 
-export function StudentOnboarding({ currentStep, userId }: StudentOnboardingProps) {
+export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: StudentOnboardingProps) {
   const router = useRouter();
   const [formData, setFormData] = useState({
     age: 0,
@@ -90,11 +91,20 @@ export function StudentOnboarding({ currentStep, userId }: StudentOnboardingProp
       },
     };
 
-    const existing = await getStudentData(userId);
-    if (existing) {
-      await updateStudentData(userId, studentData);
+    if (isPreSignup) {
+      // Save to sessionStorage instead of Firestore
+      sessionStorage.setItem(`onboardingData_student`, JSON.stringify({
+        studentData,
+        role: "student"
+      }));
     } else {
-      await createStudentData(userId, studentData);
+      // Normal flow - save to Firestore
+      const existing = await getStudentData(userId);
+      if (existing) {
+        await updateStudentData(userId, studentData);
+      } else {
+        await createStudentData(userId, studentData);
+      }
     }
   };
 
@@ -104,9 +114,14 @@ export function StudentOnboarding({ currentStep, userId }: StudentOnboardingProp
     if (currentStep < totalSteps) {
       router.push(`/onboarding/student/${currentStep + 1}`);
     } else {
-      // Complete onboarding
-      await updateUserData(userId, { onboardingCompleted: true });
-      router.push("/app/student/dashboard");
+      if (isPreSignup) {
+        // Redirect to signup page
+        router.push(`/onboarding/student/${totalSteps + 1}`);
+      } else {
+        // Complete onboarding
+        await updateUserData(userId, { onboardingCompleted: true });
+        router.push("/app/student/dashboard");
+      }
     }
   };
 

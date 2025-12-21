@@ -11,11 +11,18 @@ export default function StudentOnboardingPage() {
   const router = useRouter();
   const step = parseInt(params.step as string) || 1;
   const [user, setUser] = useState<User | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthChange((user: User | null) => {
+      setCheckingAuth(false);
       if (!user) {
-        router.push("/auth?role=student");
+        // If no user, check if we're in pre-signup flow
+        const tempUserId = sessionStorage.getItem("tempUserId_student");
+        if (!tempUserId) {
+          // Redirect to get-started if no temp user ID
+          router.push("/get-started");
+        }
       } else {
         setUser(user);
       }
@@ -24,7 +31,7 @@ export default function StudentOnboardingPage() {
     return () => unsubscribe();
   }, [router]);
 
-  if (!user) {
+  if (checkingAuth) {
     return (
       <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
         <div className="text-gray-400">Loading...</div>
@@ -32,5 +39,11 @@ export default function StudentOnboardingPage() {
     );
   }
 
-  return <StudentOnboarding currentStep={step} userId={user.uid} />;
+  // Use user ID if authenticated, otherwise use temp ID from sessionStorage
+  const userId = user?.uid || sessionStorage.getItem("tempUserId_student") || `temp_${Date.now()}`;
+  if (!user && !sessionStorage.getItem("tempUserId_student")) {
+    sessionStorage.setItem("tempUserId_student", userId);
+  }
+
+  return <StudentOnboarding currentStep={step} userId={userId} isPreSignup={!user} />;
 }
