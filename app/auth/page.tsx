@@ -183,204 +183,274 @@ function AuthPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] flex items-center justify-center px-4 py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-md"
-      >
-        <GradientCard gradient="blue-purple" glow className="p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">
-              {mode === "signup" ? "Create an Account" : "Welcome Back"}
-            </h1>
-            <p className="text-gray-400">
-              {mode === "signup" 
-                ? "Get started with Coachify" 
-                : "Sign in to your account"}
-            </p>
-          </div>
-
-          {/* Role Selection - Required for signup */}
-          {mode === "signup" && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-3 text-gray-300">
-                I want to:
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={() => {
-                    setSelectedRole("student");
-                    setError(null);
-                  }}
-                  className={`
-                    p-4 rounded-xl border-2 transition-all duration-200
-                    ${selectedRole === "student"
-                      ? "border-blue-500 bg-blue-500/20 shadow-lg shadow-blue-500/20"
-                      : "border-gray-600 hover:border-gray-500 bg-[var(--card)]"
-                    }
-                  `}
-                >
-                  <div className="text-2xl mb-2">👨‍🎓</div>
-                  <div className="font-semibold text-sm">Learn</div>
-                  <div className="text-xs text-gray-400 mt-1">As a Student</div>
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedRole("coach");
-                    setError(null);
-                  }}
-                  className={`
-                    p-4 rounded-xl border-2 transition-all duration-200
-                    ${selectedRole === "coach"
-                      ? "border-blue-500 bg-blue-500/20 shadow-lg shadow-blue-500/20"
-                      : "border-gray-600 hover:border-gray-500 bg-[var(--card)]"
-                    }
-                  `}
-                >
-                  <div className="text-2xl mb-2">🏋️</div>
-                  <div className="font-semibold text-sm">Teach</div>
-                  <div className="text-xs text-gray-400 mt-1">As a Coach</div>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Email/Password Form */}
-          <div className="space-y-4 mb-6">
-            {mode === "signup" && (
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="John Doe"
-                  className="w-full px-4 py-3 bg-[var(--card)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleEmailAuth();
-                  }}
-                />
-              </div>
-            )}
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-300">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="w-full px-4 py-3 bg-[var(--card)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleEmailAuth();
-                }}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-300">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-4 py-3 bg-[var(--card)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleEmailAuth();
-                }}
-              />
-            </div>
-          </div>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          {/* Primary Email/Password Button */}
-          <GlowButton
-            variant="primary"
-            size="lg"
-            className="w-full mb-4"
-            onClick={handleEmailAuth}
-            disabled={loading || (mode === "signup" && !selectedRole) || !email || !password || (mode === "signup" && !displayName)}
+    <div className="min-h-screen bg-[var(--background)]">
+      <Navbar />
+      
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 gradient-mesh opacity-30" />
+      <div className="absolute top-40 left-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-40 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+      
+      <div className="relative z-10 min-h-[calc(100vh-80px)] flex items-center py-20 px-4">
+        <div className="max-w-6xl mx-auto w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="grid lg:grid-cols-2 gap-12 items-center"
           >
-            {loading 
-              ? (mode === "signup" ? "Creating account..." : "Signing in...") 
-              : mode === "signup"
-                ? "Create Account"
-                : "Sign In"}
-          </GlowButton>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-600"></div>
+            {/* Left side - Branding/Info */}
+            <div className="hidden lg:block">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
+                  {mode === "signup" 
+                    ? "Join Coachify Today" 
+                    : "Welcome Back"}
+                </h1>
+                <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+                  {mode === "signup"
+                    ? "Connect with expert coaches, access premium courses, and take your game to the next level. Join thousands of athletes already improving with Coachify."
+                    : "Continue your journey with personalized coaching, expert courses, and 1-on-1 sessions tailored to your goals."}
+                </p>
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-400 text-sm">✓</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-200">Verified Coaches</p>
+                      <p className="text-sm text-gray-400">Learn from certified professionals</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-purple-400 text-sm">✓</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-200">Flexible Learning</p>
+                      <p className="text-sm text-gray-400">Courses and sessions on your schedule</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-orange-400 text-sm">✓</span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-200">Track Progress</p>
+                      <p className="text-sm text-gray-400">Monitor your improvement over time</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-[var(--card)] text-gray-400">Or continue with</span>
-            </div>
-          </div>
 
-          {/* Google Sign In Button */}
-          <button
-            onClick={handleGoogleAuth}
-            disabled={loading || (mode === "signup" && !selectedRole)}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--card)] border border-gray-600 rounded-lg text-white hover:bg-gray-700/50 hover:border-gray-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <GoogleIcon />
-            <span className="font-medium">
-              {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
-            </span>
-          </button>
+            {/* Right side - Auth Form */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="w-full max-w-lg mx-auto lg:mx-0"
+            >
+              <div className="bg-[var(--card)] border border-gray-800 rounded-2xl p-8 shadow-2xl">
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold mb-2">
+                    {mode === "signup" ? "Create an Account" : "Sign In"}
+                  </h2>
+                  <p className="text-gray-400">
+                    {mode === "signup" 
+                      ? "Get started with Coachify" 
+                      : "Sign in to your account"}
+                  </p>
+                </div>
 
-          {/* Toggle between signin/signup */}
-          <div className="mt-6 text-center">
-            {mode === "signin" ? (
-              <p className="text-sm text-gray-400">
-                Don&apos;t have an account?{" "}
-                <button
-                  onClick={() => {
-                    router.push("/auth?mode=signup");
-                    setError(null);
-                  }}
-                  className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                {/* Role Selection - Required for signup */}
+                {mode === "signup" && (
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium mb-3 text-gray-300">
+                      I want to:
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => {
+                          setSelectedRole("student");
+                          setError(null);
+                        }}
+                        className={`
+                          p-4 rounded-xl border-2 transition-all duration-200
+                          ${selectedRole === "student"
+                            ? "border-blue-500 bg-blue-500/20 shadow-lg shadow-blue-500/20"
+                            : "border-gray-600 hover:border-gray-500 bg-[var(--background)]"
+                          }
+                        `}
+                      >
+                        <div className="text-2xl mb-2">👨‍🎓</div>
+                        <div className="font-semibold text-sm">Learn</div>
+                        <div className="text-xs text-gray-400 mt-1">As a Student</div>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedRole("coach");
+                          setError(null);
+                        }}
+                        className={`
+                          p-4 rounded-xl border-2 transition-all duration-200
+                          ${selectedRole === "coach"
+                            ? "border-blue-500 bg-blue-500/20 shadow-lg shadow-blue-500/20"
+                            : "border-gray-600 hover:border-gray-500 bg-[var(--background)]"
+                          }
+                        `}
+                      >
+                        <div className="text-2xl mb-2">🏋️</div>
+                        <div className="font-semibold text-sm">Teach</div>
+                        <div className="text-xs text-gray-400 mt-1">As a Coach</div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Email/Password Form */}
+                <div className="space-y-4 mb-6">
+                  {mode === "signup" && (
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-300">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        placeholder="John Doe"
+                        className="w-full px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleEmailAuth();
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-300">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleEmailAuth();
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-gray-300">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleEmailAuth();
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {/* Primary Email/Password Button */}
+                <GlowButton
+                  variant="primary"
+                  size="lg"
+                  className="w-full mb-4"
+                  onClick={handleEmailAuth}
+                  disabled={loading || (mode === "signup" && !selectedRole) || !email || !password || (mode === "signup" && !displayName)}
                 >
-                  Sign up
-                </button>
-              </p>
-            ) : (
-              <p className="text-sm text-gray-400">
-                Already have an account?{" "}
-                <button
-                  onClick={() => {
-                    router.push("/auth?mode=signin");
-                    setError(null);
-                  }}
-                  className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-                >
-                  Sign in
-                </button>
-              </p>
-            )}
-          </div>
+                  {loading 
+                    ? (mode === "signup" ? "Creating account..." : "Signing in...") 
+                    : mode === "signup"
+                      ? "Create Account"
+                      : "Sign In"}
+                </GlowButton>
 
-          {/* Terms */}
-          <p className="text-xs text-gray-500 text-center mt-6">
-            By continuing, you agree to our{" "}
-            <a href="#" className="text-blue-400 hover:underline">Terms</a> and{" "}
-            <a href="#" className="text-blue-400 hover:underline">Privacy Policy</a>
-          </p>
-        </GradientCard>
-      </motion.div>
+                {/* Divider */}
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-600"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-[var(--card)] text-gray-400">Or continue with</span>
+                  </div>
+                </div>
+
+                {/* Google Sign In Button */}
+                <button
+                  onClick={handleGoogleAuth}
+                  disabled={loading || (mode === "signup" && !selectedRole)}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white hover:bg-gray-700/50 hover:border-gray-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <GoogleIcon />
+                  <span className="font-medium">
+                    {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
+                  </span>
+                </button>
+
+                {/* Toggle between signin/signup */}
+                <div className="mt-6 text-center">
+                  {mode === "signin" ? (
+                    <p className="text-sm text-gray-400">
+                      Don&apos;t have an account?{" "}
+                      <button
+                        onClick={() => {
+                          router.push("/auth?mode=signup");
+                          setError(null);
+                        }}
+                        className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                      >
+                        Sign up
+                      </button>
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-400">
+                      Already have an account?{" "}
+                      <button
+                        onClick={() => {
+                          router.push("/auth?mode=signin");
+                          setError(null);
+                        }}
+                        className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                      >
+                        Sign in
+                      </button>
+                    </p>
+                  )}
+                </div>
+
+                {/* Terms */}
+                <p className="text-xs text-gray-500 text-center mt-6">
+                  By continuing, you agree to our{" "}
+                  <a href="#" className="text-blue-400 hover:underline">Terms</a> and{" "}
+                  <a href="#" className="text-blue-400 hover:underline">Privacy Policy</a>
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </div>
+      
+      <Footer />
     </div>
   );
 }
