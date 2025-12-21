@@ -18,7 +18,10 @@ export function Navbar() {
   useEffect(() => {
     let unsubscribe: (() => void) | undefined;
     
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") {
+      setLoading(false);
+      return;
+    }
     
     try {
       unsubscribe = onAuthChange(async (user: User | null) => {

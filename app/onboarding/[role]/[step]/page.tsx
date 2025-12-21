@@ -51,10 +51,10 @@ function OnboardingPageContent() {
       <Navbar />
       
       {/* Background decorative elements */}
-      <div className="absolute inset-0 gradient-mesh opacity-30" />
-      <div className="absolute top-40 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+      <div className="fixed inset-0 gradient-mesh opacity-30 pointer-events-none" />
+      <div className="fixed top-40 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
       
-      <div className="relative z-10">
+      <div className="relative z-10 pt-20">
         {role === "student" ? (
           <StudentOnboarding currentStep={step} userId={tempUserId} isPreSignup={true} />
         ) : (
