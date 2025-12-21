@@ -1,25 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { onAuthChange, signOut } from "@/lib/firebase/auth";
-import { getUserData } from "@/lib/firebase/firestore";
+import { getUserData, getCoachData } from "@/lib/firebase/firestore";
 import { User } from "firebase/auth";
 import { Footer } from "./Footer";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   role: "coach" | "student";
+  activeTab?: string;
+  setActiveTab?: (tab: string) => void;
 }
 
 const coachNavItems = [
-  { href: "/app/coach/dashboard", label: "Dashboard", icon: "📊" },
-  { href: "/app/coach/bookings", label: "Bookings", icon: "📅" },
-  { href: "/app/coach/students", label: "Students", icon: "👥" },
-  { href: "/app/coach/courses", label: "Courses", icon: "📚" },
-  { href: "/app/coach/content/videos", label: "Content", icon: "🎥" },
-  { href: "/app/coach/articles", label: "Articles", icon: "✍️" },
+  { href: "/app/coach/dashboard", label: "Dashboard", icon: "📊", key: "dashboard" },
+  { href: "/app/coach/bookings", label: "Bookings", icon: "📅", key: "bookings" },
+  { href: "/app/coach/students", label: "Students", icon: "👥", key: "students" },
+  { href: "/app/coach/courses", label: "Courses", icon: "📚", key: "courses" },
+  { href: "/app/coach/content/videos", label: "Content", icon: "🎥", key: "content" },
+  { href: "/app/coach/articles", label: "Articles", icon: "✍️", key: "articles" },
+  { href: "/app/coach/my-page", label: "My Page", icon: "🌐", key: "my-page" },
 ];
 
 const studentNavItems = [
@@ -28,14 +31,20 @@ const studentNavItems = [
   { href: "/app/student/library", label: "Library", icon: "📚" },
 ];
 
-export function DashboardLayout({ children, role }: DashboardLayoutProps) {
+export function DashboardLayout({ children, role, activeTab: externalActiveTab, setActiveTab: externalSetActiveTab }: DashboardLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [userData, setUserData] = useState<any>(null);
+  const [coachData, setCoachData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [internalActiveTab, setInternalActiveTab] = useState<string>("dashboard");
+  
+  // Use external tab state if provided, otherwise use internal
+  const activeTab = externalActiveTab !== undefined ? externalActiveTab : internalActiveTab;
+  const setActiveTab = externalSetActiveTab || setInternalActiveTab;
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -56,6 +65,15 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
         if (typeof window !== "undefined") {
           localStorage.setItem("userId", user.uid);
         }
+        // Load coach data if role is coach
+        if (role === "coach") {
+          try {
+            const coach = await getCoachData(user.uid);
+            setCoachData(coach);
+          } catch (error) {
+            console.error("Error loading coach data:", error);
+          }
+        }
       } catch (error) {
         console.error("Error fetching user data:", error);
       } finally {
@@ -65,6 +83,13 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
 
     return () => unsubscribe();
   }, [role, router]);
+
+  // Sync external activeTab to internal state
+  useEffect(() => {
+    if (externalActiveTab !== undefined) {
+      setInternalActiveTab(externalActiveTab);
+    }
+  }, [externalActiveTab]);
 
   const handleLogout = async () => {
     try {
@@ -100,8 +125,32 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
               </Link>
             </div>
 
-            {/* Right: User Info with Dropdown */}
+            {/* Right: Message Center & User Info */}
             <div className="flex items-center gap-4">
+              {/* Message Center Icon */}
+              {user && userData && role === "coach" && (
+                <button
+                  onClick={() => {
+                    const newTab = activeTab === "messages" ? "dashboard" : "messages";
+                    setActiveTab(newTab);
+                  }}
+                  className={`relative p-2 transition-colors ${
+                    activeTab === "messages" 
+                      ? "text-blue-400" 
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                  title="Messages"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  {/* Notification badge - can be updated with actual unread count */}
+                  {activeTab !== "messages" && (
+                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+                  )}
+                </button>
+              )}
+              
               {user && userData && (
                 <div className="relative">
                   <button
@@ -119,9 +168,31 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
                         {(userData.displayName || user.email || "U")[0].toUpperCase()}
                       </div>
                     )}
-                    <div className="hidden sm:block text-sm text-left">
-                      <div className="text-white font-medium">{userData.displayName || user.email}</div>
-                      <div className="text-gray-400 text-xs capitalize">{role}</div>
+                    <div className="hidden sm:flex items-center gap-2">
+                      <div className="text-sm text-left">
+                        <div className="text-white font-medium flex items-center gap-2">
+                          {userData.displayName || user.email}
+                          {/* Verification Check Bubble */}
+                          {role === "coach" && (
+                            <div className="relative group">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                coachData?.isVerified 
+                                  ? "bg-green-500 border-green-500" 
+                                  : "border-gray-500 bg-transparent"
+                              }`}>
+                                <svg className={`w-3 h-3 ${coachData?.isVerified ? "text-white" : "text-gray-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </div>
+                              {/* Tooltip */}
+                              <div className="absolute right-0 top-full mt-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                                {coachData?.isVerified ? "Verified" : "Not Verified"}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-gray-400 text-xs capitalize">{role}</div>
+                      </div>
                     </div>
                     <svg
                       className={`w-4 h-4 text-gray-400 transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
@@ -192,13 +263,13 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
           <div className="h-full overflow-y-auto px-4 py-6 flex flex-col">
             <nav className="space-y-2">
               {navItems.map((item) => {
-                const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+                const isActive = activeTab === item.key;
                 return (
-                  <Link
+                  <button
                     key={item.href}
-                    href={item.href}
+                    onClick={() => setActiveTab(item.key)}
                     className={`
-                      flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
+                      w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left
                       ${
                         isActive
                           ? "bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-white"
@@ -208,7 +279,7 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
                   >
                     <span className="text-xl">{item.icon}</span>
                     <span className="font-medium">{item.label}</span>
-                  </Link>
+                  </button>
                 );
               })}
             </nav>
@@ -256,7 +327,9 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
 
         {/* Main Content */}
         <main className="flex-1 lg:ml-64 min-h-[calc(100vh-64px)] pb-20">
-          <div className="h-full">{children}</div>
+          <div className="h-full">
+            {children}
+          </div>
         </main>
       </div>
 
