@@ -57,27 +57,9 @@ function AuthPageContent() {
           
           if (!userData) {
             // New user signing in - redirect to get-started
-            if (mode === "signin") {
-              router.push("/get-started");
-              setLoading(false);
-              return;
-            }
-            
-            // New user signing in without account - redirect to get-started
             router.push("/get-started");
             setLoading(false);
             return;
-            } catch (createError: any) {
-              console.error("Error creating user data:", createError);
-              if (createError.code === "permission-denied" || createError.message?.includes("permission")) {
-                setError(
-                  "Firestore security rules not deployed. Please deploy firestore.rules using: firebase deploy --only firestore:rules"
-                );
-              } else {
-                setError("Failed to create account. Please try again.");
-              }
-              setLoading(false);
-            }
           } else {
             // Existing user - route based on onboarding status
             if (userData.onboardingCompleted) {
