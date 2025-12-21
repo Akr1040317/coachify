@@ -6,7 +6,8 @@ import { signInWithGoogle, signUpWithEmail, signInWithEmail, onAuthChange } from
 import { getUserData, createUserData } from "@/lib/firebase/firestore";
 import { User } from "firebase/auth";
 import { GlowButton } from "@/components/ui/GlowButton";
-import { GradientCard } from "@/components/ui/GradientCard";
+import { Navbar } from "@/components/layout/Navbar";
+import { Footer } from "@/components/layout/Footer";
 import { motion } from "framer-motion";
 
 // Google Icon SVG Component
