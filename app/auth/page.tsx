@@ -35,16 +35,18 @@ const GoogleIcon = () => (
 function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const mode = searchParams.get("mode") || "signup"; // signup or signin
-  const roleParam = searchParams.get("role");
-  const [selectedRole, setSelectedRole] = useState<"student" | "coach" | null>(
-    roleParam === "coach" ? "coach" : roleParam === "student" ? "student" : null
-  );
+  const mode = searchParams.get("mode") || "signin"; // Only signin now
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
+
+  // Redirect signup attempts to get-started
+  useEffect(() => {
+    if (mode === "signup") {
+      router.push("/get-started");
+    }
+  }, [mode, router]);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -110,22 +112,12 @@ function AuthPageContent() {
     });
 
     return () => unsubscribe();
-  }, [router, selectedRole, mode, displayName]);
+  }, [router, mode]);
 
   const handleEmailAuth = async () => {
-    // For signup, require role selection
-    if (mode === "signup" && !selectedRole) {
-      setError("Please select a role first");
-      return;
-    }
-
     // Validate fields
     if (!email || !password) {
       setError("Please enter email and password");
-      return;
-    }
-    if (mode === "signup" && !displayName.trim()) {
-      setError("Please enter your name");
       return;
     }
 
@@ -133,24 +125,16 @@ function AuthPageContent() {
     setError(null);
     
     try {
-      if (mode === "signup") {
-        await signUpWithEmail(email, password, displayName);
-      } else {
-        await signInWithEmail(email, password);
-      }
+      await signInWithEmail(email, password);
       // onAuthChange will handle the redirect
     } catch (error: any) {
       console.error("Auth error:", error);
-      let errorMessage = "Failed to authenticate. Please try again.";
+      let errorMessage = "Failed to sign in. Please try again.";
       
-      if (error.code === "auth/email-already-in-use") {
-        errorMessage = "This email is already registered. Please sign in instead.";
-      } else if (error.code === "auth/user-not-found") {
+      if (error.code === "auth/user-not-found") {
         errorMessage = "No account found with this email. Please sign up first.";
       } else if (error.code === "auth/wrong-password") {
         errorMessage = "Incorrect password. Please try again.";
-      } else if (error.code === "auth/weak-password") {
-        errorMessage = "Password should be at least 6 characters.";
       } else if (error.code === "auth/invalid-email") {
         errorMessage = "Invalid email address.";
       } else if (error.message) {
@@ -163,12 +147,6 @@ function AuthPageContent() {
   };
 
   const handleGoogleAuth = async () => {
-    // For signup, require role selection
-    if (mode === "signup" && !selectedRole) {
-      setError("Please select a role first");
-      return;
-    }
-
     setLoading(true);
     setError(null);
     
@@ -207,14 +185,10 @@ function AuthPageContent() {
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
                 <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
-                  {mode === "signup" 
-                    ? "Join Coachify Today" 
-                    : "Welcome Back"}
+                  Welcome Back
                 </h1>
                 <p className="text-xl text-gray-300 mb-8 leading-relaxed">
-                  {mode === "signup"
-                    ? "Connect with expert coaches, access premium courses, and take your game to the next level. Join thousands of athletes already improving with Coachify."
-                    : "Continue your journey with personalized coaching, expert courses, and 1-on-1 sessions tailored to your goals."}
+                  Continue your journey with personalized coaching, expert courses, and 1-on-1 sessions tailored to your goals.
                 </p>
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
@@ -258,80 +232,14 @@ function AuthPageContent() {
               <div className="bg-[var(--card)] border border-gray-800 rounded-2xl p-8 shadow-2xl">
                 {/* Header */}
                 <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold mb-2">
-                    {mode === "signup" ? "Create an Account" : "Sign In"}
-                  </h2>
+                  <h2 className="text-3xl font-bold mb-2">Sign In</h2>
                   <p className="text-gray-400">
-                    {mode === "signup" 
-                      ? "Get started with Coachify" 
-                      : "Sign in to your account"}
+                    Sign in to your account
                   </p>
                 </div>
 
-                {/* Role Selection - Required for signup */}
-                {mode === "signup" && (
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium mb-3 text-gray-300">
-                      I want to:
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => {
-                          setSelectedRole("student");
-                          setError(null);
-                        }}
-                        className={`
-                          p-4 rounded-xl border-2 transition-all duration-200
-                          ${selectedRole === "student"
-                            ? "border-blue-500 bg-blue-500/20 shadow-lg shadow-blue-500/20"
-                            : "border-gray-600 hover:border-gray-500 bg-[var(--background)]"
-                          }
-                        `}
-                      >
-                        <div className="text-2xl mb-2">👨‍🎓</div>
-                        <div className="font-semibold text-sm">Learn</div>
-                        <div className="text-xs text-gray-400 mt-1">As a Student</div>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedRole("coach");
-                          setError(null);
-                        }}
-                        className={`
-                          p-4 rounded-xl border-2 transition-all duration-200
-                          ${selectedRole === "coach"
-                            ? "border-blue-500 bg-blue-500/20 shadow-lg shadow-blue-500/20"
-                            : "border-gray-600 hover:border-gray-500 bg-[var(--background)]"
-                          }
-                        `}
-                      >
-                        <div className="text-2xl mb-2">🏋️</div>
-                        <div className="font-semibold text-sm">Teach</div>
-                        <div className="text-xs text-gray-400 mt-1">As a Coach</div>
-                      </button>
-                    </div>
-                  </div>
-                )}
-
                 {/* Email/Password Form */}
                 <div className="space-y-4 mb-6">
-                  {mode === "signup" && (
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-gray-300">
-                        Full Name
-                      </label>
-                      <input
-                        type="text"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        placeholder="John Doe"
-                        className="w-full px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleEmailAuth();
-                        }}
-                      />
-                    </div>
-                  )}
                   <div>
                     <label className="block text-sm font-medium mb-2 text-gray-300">
                       Email
@@ -376,13 +284,9 @@ function AuthPageContent() {
                   size="lg"
                   className="w-full mb-4"
                   onClick={handleEmailAuth}
-                  disabled={loading || (mode === "signup" && !selectedRole) || !email || !password || (mode === "signup" && !displayName)}
+                  disabled={loading || !email || !password}
                 >
-                  {loading 
-                    ? (mode === "signup" ? "Creating account..." : "Signing in...") 
-                    : mode === "signup"
-                      ? "Create Account"
-                      : "Sign In"}
+                  {loading ? "Signing in..." : "Sign In"}
                 </GlowButton>
 
                 {/* Divider */}
@@ -398,44 +302,27 @@ function AuthPageContent() {
                 {/* Google Sign In Button */}
                 <button
                   onClick={handleGoogleAuth}
-                  disabled={loading || (mode === "signup" && !selectedRole)}
+                  disabled={loading}
                   className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white hover:bg-gray-700/50 hover:border-gray-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <GoogleIcon />
-                  <span className="font-medium">
-                    {mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
-                  </span>
+                  <span className="font-medium">Sign in with Google</span>
                 </button>
 
-                {/* Toggle between signin/signup */}
+                {/* Link to get started */}
                 <div className="mt-6 text-center">
-                  {mode === "signin" ? (
-                    <p className="text-sm text-gray-400">
-                      Don&apos;t have an account?{" "}
-                      <button
-                        onClick={() => {
-                          router.push("/auth?mode=signup");
-                          setError(null);
-                        }}
-                        className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-                      >
-                        Sign up
-                      </button>
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-400">
-                      Already have an account?{" "}
-                      <button
-                        onClick={() => {
-                          router.push("/auth?mode=signin");
-                          setError(null);
-                        }}
-                        className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
-                      >
-                        Sign in
-                      </button>
-                    </p>
-                  )}
+                  <p className="text-sm text-gray-400">
+                    Don&apos;t have an account?{" "}
+                    <button
+                      onClick={() => {
+                        router.push("/get-started");
+                        setError(null);
+                      }}
+                      className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+                    >
+                      Get Started
+                    </button>
+                  </p>
                 </div>
 
                 {/* Terms */}

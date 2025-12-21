@@ -79,19 +79,27 @@ export function OnboardingSignup({ role }: OnboardingSignupProps) {
             const coachData = { ...onboardingData.coachData };
             
             // Handle file uploads if they exist
-            if (coachData.profilePhotoFile) {
-              const file = base64ToFile(coachData.profilePhotoFile, "profile.jpg");
-              const storageRef = ref(storage, `coaches/${user.uid}/avatar`);
-              await uploadBytes(storageRef, file);
-              coachData.avatarUrl = await getDownloadURL(storageRef);
+            if (coachData.profilePhotoFile && storage) {
+              try {
+                const file = base64ToFile(coachData.profilePhotoFile, "profile.jpg");
+                const storageRef = ref(storage, `coaches/${user.uid}/avatar`);
+                await uploadBytes(storageRef, file);
+                coachData.avatarUrl = await getDownloadURL(storageRef);
+              } catch (error) {
+                console.error("Error uploading profile photo:", error);
+              }
               delete coachData.profilePhotoFile;
             }
             
-            if (coachData.introVideoFile) {
-              const file = base64ToFile(coachData.introVideoFile, "intro-video.mp4");
-              const storageRef = ref(storage, `coaches/${user.uid}/intro-video`);
-              await uploadBytes(storageRef, file);
-              coachData.introVideoUrl = await getDownloadURL(storageRef);
+            if (coachData.introVideoFile && storage) {
+              try {
+                const file = base64ToFile(coachData.introVideoFile, "intro-video.mp4");
+                const storageRef = ref(storage, `coaches/${user.uid}/intro-video`);
+                await uploadBytes(storageRef, file);
+                coachData.introVideoUrl = await getDownloadURL(storageRef);
+              } catch (error) {
+                console.error("Error uploading intro video:", error);
+              }
               delete coachData.introVideoFile;
             }
             

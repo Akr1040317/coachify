@@ -92,6 +92,16 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
     return getDownloadURL(storageRef);
   };
 
+  // Helper to convert file to base64 for storage
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const saveData = async () => {
     let avatarUrl = formData.profilePhotoUrl;
     let introVideoUrl = formData.introVideoUrl;
@@ -191,16 +201,6 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
     } else {
       await createCoachData(userId, coachData);
     }
-  };
-
-  // Helper to convert file to base64 for storage
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
   };
 
   const handleNext = async () => {
