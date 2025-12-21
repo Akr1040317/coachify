@@ -107,7 +107,19 @@ export const createUserData = async (uid: string, data: Partial<UserData>): Prom
 export const updateUserData = async (uid: string, data: Partial<UserData>): Promise<void> => {
   if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "users", uid);
-  await updateDoc(docRef, data);
+  
+  // Check if document exists first
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    await updateDoc(docRef, data);
+  } else {
+    // Document doesn't exist, create it with the data
+    await setDoc(docRef, {
+      ...data,
+      createdAt: serverTimestamp(),
+      onboardingCompleted: false,
+    } as UserData);
+  }
 };
 
 // Student operations

@@ -13,9 +13,7 @@ export default function GetStartedPage() {
 
   const handleContinue = () => {
     if (selectedRole) {
-      // Store role in sessionStorage for the onboarding flow
-      sessionStorage.setItem("onboardingRole", selectedRole);
-      router.push(`/onboarding/${selectedRole}/1`);
+      router.push(`/get-started/signup/${selectedRole}`);
     }
   };
 

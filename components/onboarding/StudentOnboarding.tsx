@@ -91,20 +91,12 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
       },
     };
 
-    if (isPreSignup) {
-      // Save to sessionStorage instead of Firestore
-      sessionStorage.setItem(`onboardingData_student`, JSON.stringify({
-        studentData,
-        role: "student"
-      }));
+    // Always save to Firestore (user is authenticated)
+    const existing = await getStudentData(userId);
+    if (existing) {
+      await updateStudentData(userId, studentData);
     } else {
-      // Normal flow - save to Firestore
-      const existing = await getStudentData(userId);
-      if (existing) {
-        await updateStudentData(userId, studentData);
-      } else {
-        await createStudentData(userId, studentData);
-      }
+      await createStudentData(userId, studentData);
     }
   };
 
@@ -126,15 +118,13 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
         const nextStep = currentStep + 1;
         router.push(`/onboarding/student/${nextStep}`);
       } else {
-        if (isPreSignup) {
-          // Redirect to signup page
-          router.push(`/onboarding/student/${totalSteps + 1}`);
-        } else {
-          try {
-            await updateUserData(userId, { onboardingCompleted: true });
-          } catch (updateError) {
-            console.error("Error updating user data:", updateError);
-          }
+        // After last step, complete onboarding
+        try {
+          await updateUserData(userId, { onboardingCompleted: true });
+          router.push("/app/student/dashboard");
+        } catch (updateError) {
+          console.error("Error updating user data:", updateError);
+          // Still redirect to dashboard even if update fails
           router.push("/app/student/dashboard");
         }
       }

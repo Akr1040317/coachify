@@ -44,7 +44,8 @@ export function OnboardingSignup({ role }: OnboardingSignupProps) {
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -63,10 +64,19 @@ export function OnboardingSignup({ role }: OnboardingSignupProps) {
 
           const onboardingData = JSON.parse(onboardingDataStr);
 
+          // Get name from onboarding data or form
+          let fullName = user.displayName || "";
+          if (!fullName && role === "coach" && onboardingData.coachData) {
+            // Coach data has displayName (firstName + lastName)
+            fullName = onboardingData.coachData.displayName || `${firstName} ${lastName}`.trim();
+          } else if (!fullName) {
+            fullName = `${firstName} ${lastName}`.trim();
+          }
+
           // Create user document
           await createUserData(user.uid, {
             email: user.email || email,
-            displayName: user.displayName || displayName || "",
+            displayName: fullName,
             photoURL: user.photoURL || undefined,
             role: role,
             onboardingCompleted: true,
@@ -122,15 +132,15 @@ export function OnboardingSignup({ role }: OnboardingSignupProps) {
     });
 
     return () => unsubscribe();
-  }, [role, router, email, displayName]);
+  }, [role, router, email, firstName, lastName]);
 
   const handleEmailSignup = async () => {
     if (!email || !password) {
       setError("Please enter email and password");
       return;
     }
-    if (!displayName.trim()) {
-      setError("Please enter your name");
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("Please enter your first and last name");
       return;
     }
 
@@ -138,6 +148,7 @@ export function OnboardingSignup({ role }: OnboardingSignupProps) {
     setError(null);
 
     try {
+      const displayName = `${firstName} ${lastName}`.trim();
       await signUpWithEmail(email, password, displayName);
       // onAuthChange will handle the redirect and data saving
     } catch (error: any) {
@@ -182,39 +193,57 @@ export function OnboardingSignup({ role }: OnboardingSignupProps) {
       <div className="absolute top-40 left-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
       <div className="absolute bottom-40 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
       
-      <div className="relative z-10 min-h-[calc(100vh-80px)] flex items-center py-20 px-4">
+      <div className="relative z-10 min-h-[calc(100vh-80px)] flex items-center justify-center py-20 px-4">
         <div className="max-w-2xl mx-auto w-full">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-[var(--card)] border border-gray-800 rounded-2xl p-8 shadow-2xl"
+            className="bg-[var(--card)] border border-gray-800 rounded-2xl p-10 shadow-2xl"
           >
-            <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold mb-2">Create Your Account</h1>
-              <p className="text-gray-400">
+            <div className="text-center mb-10">
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">Create Your Account</h1>
+              <p className="text-gray-400 text-lg md:text-xl">
                 You&apos;re almost done! Create your account to save your information and get started.
               </p>
             </div>
 
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="John Doe"
-                  className="w-full px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleEmailSignup();
-                  }}
-                />
+            <div className="space-y-5 mb-8">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-base font-medium mb-2 text-gray-300">
+                    First Name
+                  </label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="John"
+                    className="w-full px-5 py-4 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleEmailSignup();
+                    }}
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-base font-medium mb-2 text-gray-300">
+                    Last Name
+                  </label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Doe"
+                    className="w-full px-5 py-4 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleEmailSignup();
+                    }}
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
+                <label className="block text-base font-medium mb-2 text-gray-300">
                   Email
                 </label>
                 <input
@@ -222,14 +251,14 @@ export function OnboardingSignup({ role }: OnboardingSignupProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full px-5 py-4 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleEmailSignup();
                   }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-300">
+                <label className="block text-base font-medium mb-2 text-gray-300">
                   Password
                 </label>
                 <input
@@ -237,7 +266,7 @@ export function OnboardingSignup({ role }: OnboardingSignupProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                  className="w-full px-5 py-4 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white text-lg placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") handleEmailSignup();
                   }}
@@ -254,9 +283,9 @@ export function OnboardingSignup({ role }: OnboardingSignupProps) {
             <GlowButton
               variant="primary"
               size="lg"
-              className="w-full mb-4"
+              className="w-full mb-6 text-lg py-4"
               onClick={handleEmailSignup}
-              disabled={loading || !email || !password || !displayName}
+              disabled={loading || !email || !password || !firstName || !lastName}
             >
               {loading ? "Creating account..." : "Create Account"}
             </GlowButton>
@@ -275,7 +304,7 @@ export function OnboardingSignup({ role }: OnboardingSignupProps) {
             <button
               onClick={handleGoogleSignup}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white hover:bg-gray-700/50 hover:border-gray-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-3 px-4 py-4 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white text-lg hover:bg-gray-700/50 hover:border-gray-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <GoogleIcon />
               <span className="font-medium">Sign up with Google</span>

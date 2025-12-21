@@ -16,18 +16,17 @@ export default function StudentOnboardingPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
+    // Require authentication for all onboarding steps
     const unsubscribe = onAuthChange((user: User | null) => {
       setCheckingAuth(false);
       if (!user) {
-        // If no user, check if we're in pre-signup flow
-        const tempUserId = sessionStorage.getItem("tempUserId_student");
-        if (!tempUserId) {
-          // Redirect to get-started if no temp user ID
-          router.push("/get-started");
-        }
-      } else {
-        setUser(user);
+        // No user - redirect to get-started to sign up first
+        router.push("/get-started");
+        return;
       }
+      
+      setUser(user);
+      // User is authenticated - they can proceed with onboarding
     });
 
     return () => unsubscribe();
@@ -41,11 +40,16 @@ export default function StudentOnboardingPage() {
     );
   }
 
-  // Use user ID if authenticated, otherwise use temp ID from sessionStorage
-  const userId = user?.uid || sessionStorage.getItem("tempUserId_student") || `temp_${Date.now()}`;
-  if (!user && !sessionStorage.getItem("tempUserId_student")) {
-    sessionStorage.setItem("tempUserId_student", userId);
+  // Require user to be authenticated
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-gray-400">Redirecting to signup...</div>
+      </div>
+    );
   }
+
+  const userId = user.uid;
 
   return (
     <div className="min-h-screen bg-[var(--background)] flex flex-col">
@@ -56,7 +60,7 @@ export default function StudentOnboardingPage() {
       <div className="fixed top-40 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
       
       <div className="relative z-10 flex-1 flex items-center justify-center pt-20">
-        <StudentOnboarding currentStep={step} userId={userId} isPreSignup={!user} />
+        <StudentOnboarding currentStep={step} userId={userId} isPreSignup={false} />
       </div>
       
       <Footer />

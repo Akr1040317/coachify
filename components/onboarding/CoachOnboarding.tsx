@@ -49,7 +49,7 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
     weeklyRules: [] as Array<{ dayOfWeek: number; start: string; end: string }>,
   });
 
-  const totalSteps = 7;
+  const totalSteps = 6;
 
   useEffect(() => {
     // Reset question index when step changes
@@ -117,73 +117,13 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
     let avatarUrl = formData.profilePhotoUrl;
     let introVideoUrl = formData.introVideoUrl;
 
-    // For pre-signup, we'll store file references and upload after signup
-    if (isPreSignup) {
-      const coachData = {
-        userId,
-        displayName: `${formData.firstName} ${formData.lastName}`.trim(),
-        headline: formData.headline,
-        bio: formData.bio,
-        timezone: formData.timezone,
-        location: "", // Online coaching, no location needed
-        sports: formData.sports,
-        specialtiesBySport: formData.specialtiesBySport,
-        experienceType: formData.experienceType,
-        credentials: formData.credentials.split("\n").filter(c => c.trim()),
-        socialLinks: Object.fromEntries(
-          Object.entries({
-            linkedin: formData.linkedin,
-            youtube: formData.youtube,
-            instagram: formData.instagram,
-          }).filter(([_, value]) => value && value.trim() !== "")
-        ),
-        avatarUrl: avatarUrl || "",
-        introVideoUrl: introVideoUrl || "",
-        introVideoThumbnailUrl: "",
-        coachingPhilosophy: formData.coachingPhilosophy,
-        isVerified: false,
-        status: "pending_verification" as const,
-        sessionOffers: {
-          freeIntroEnabled: formData.freeIntroEnabled,
-          freeIntroMinutes: formData.freeIntroMinutes,
-          paid: [
-            { minutes: 30, priceCents: formData.price30Min * 100, currency: "USD" },
-            { minutes: 60, priceCents: formData.price60Min * 100, currency: "USD" },
-          ],
-        },
-        ratingAvg: 0,
-        ratingCount: 0,
-        // Store file references for upload after signup
-        profilePhotoFile: formData.profilePhoto ? await fileToBase64(formData.profilePhoto) : null,
-        introVideoFile: formData.introVideo ? await fileToBase64(formData.introVideo) : null,
-      };
-
-      sessionStorage.setItem(`onboardingData_coach`, JSON.stringify({
-        coachData,
-        role: "coach"
-      }));
-      return;
-    }
-
-    // Normal flow - upload files and save to Firestore
-    // Only upload if user is authenticated (not in pre-signup flow)
-    if (!isPreSignup) {
-      if (formData.profilePhoto && storage) {
-        try {
-          avatarUrl = await uploadFile(formData.profilePhoto, `coaches/${userId}/avatar`);
-        } catch (error) {
-          console.warn("Failed to upload profile photo:", error);
-          // Keep existing URL if upload fails
-        }
-      }
-
-      if (formData.introVideo && storage) {
-        try {
-          introVideoUrl = await uploadFile(formData.introVideo, `coaches/${userId}/intro-video`);
-        } catch (error) {
-          console.warn("Failed to upload intro video:", error);
-          // Keep existing URL if upload fails
-        }
+    // Upload files if provided
+    if (formData.introVideo && storage) {
+      try {
+        introVideoUrl = await uploadFile(formData.introVideo, `coaches/${userId}/intro-video`);
+      } catch (error) {
+        console.warn("Failed to upload intro video:", error);
+        // Keep existing URL if upload fails
       }
     }
 
@@ -248,9 +188,9 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
         ];
       case 6:
         return [
-          { key: "freeIntro", question: "Do you want to offer a free intro consultation?", description: "This helps students get to know you", required: false },
           { key: "price30Min", question: "What's your price for a 30-minute session?", description: "Enter amount in USD", required: true },
           { key: "price60Min", question: "What's your price for a 60-minute session?", description: "Enter amount in USD", required: true },
+          { key: "freeIntro", question: "Do you want to offer a free intro consultation?", description: "This helps students get to know you", required: false },
         ];
       default:
         return [];
@@ -258,8 +198,10 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
   };
 
   const stepQuestions = getStepQuestions();
-  const currentQuestion = stepQuestions[questionIndex];
-  const isLastQuestionInStep = questionIndex === stepQuestions.length - 1;
+  const currentQuestion = stepQuestions.length > 0 && questionIndex < stepQuestions.length 
+    ? stepQuestions[questionIndex] 
+    : undefined;
+  const isLastQuestionInStep = stepQuestions.length > 0 && questionIndex === stepQuestions.length - 1;
 
   const handleNext = async () => {
     // If there are sub-questions in this step, handle them first
@@ -269,20 +211,16 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
     }
 
     try {
-      // Save data, but don't block navigation on errors
-      // File uploads will fail in pre-signup flow, which is expected
+      // Save data before navigation
       try {
         await saveData();
+        console.log("Data saved successfully for step", currentStep);
       } catch (saveError: any) {
-        // If it's a CORS/storage error and we're in pre-signup, that's expected
-        if (isPreSignup && (saveError?.code === 'storage/unauthorized' || saveError?.message?.includes('CORS'))) {
-          console.log("File upload skipped in pre-signup flow (expected)");
-        } else {
-          console.error("Error saving data:", saveError);
-          // For step 1, we can continue even if save fails
-          if (currentStep > 1) {
-            throw saveError;
-          }
+        console.error("Error saving data:", saveError);
+        // For step 1, we can continue even if save fails
+        if (currentStep > 1) {
+          // Don't throw - allow navigation to continue
+          console.warn("Save failed but continuing navigation");
         }
       }
       
@@ -292,17 +230,17 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
       // Navigate to next step
       if (currentStep < totalSteps) {
         const nextStep = currentStep + 1;
+        console.log("Navigating to step", nextStep);
         router.push(`/onboarding/coach/${nextStep}`);
       } else {
-        if (isPreSignup) {
-          // Redirect to signup page
-          router.push(`/onboarding/coach/${totalSteps + 1}`);
-        } else {
-          try {
-            await updateUserData(userId, { onboardingCompleted: true });
-          } catch (updateError) {
-            console.error("Error updating user data:", updateError);
-          }
+        // After last step (step 6), complete onboarding
+        console.log("Onboarding complete, navigating to dashboard");
+        try {
+          await updateUserData(userId, { onboardingCompleted: true });
+          router.push("/app/coach/dashboard");
+        } catch (updateError) {
+          console.error("Error updating user data:", updateError);
+          // Still redirect to dashboard even if update fails
           router.push("/app/coach/dashboard");
         }
       }
@@ -368,8 +306,6 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
         return formData.bio !== "";
       case 6:
         return formData.price30Min > 0 && formData.price60Min > 0;
-      case 7:
-        return true; // Availability can be set later
       default:
         return false;
     }
@@ -450,11 +386,12 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
       case 3:
         return (
           <GradientCard>
-            <div className="text-center mb-8">
-              <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">Sports You Coach</h2>
-              <p className="text-gray-400 text-xl md:text-2xl">Select all sports you coach</p>
+            <div className="text-center mb-6">
+              <h2 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">Sports You Coach</h2>
+              <p className="text-gray-400 text-lg mb-2">Select all sports you coach</p>
+              <p className="text-gray-500 text-sm mb-4">Click on each sport to select or deselect. You can choose multiple sports.</p>
             </div>
-            <div className="grid grid-cols-3 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-4 md:grid-cols-5 gap-3 mb-4 max-h-[400px] overflow-y-auto">
               {SPORTS.map((sport) => (
                 <SportIconCard
                   key={sport}
@@ -470,15 +407,16 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
               ))}
             </div>
             {formData.sports.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="font-semibold">Specialties per sport</h3>
+              <div className="space-y-3 mt-4">
+                <h3 className="font-semibold text-lg mb-3">Select specialties for each sport (optional)</h3>
+                <div className="max-h-[300px] overflow-y-auto space-y-3">
                 {formData.sports.map((sport) => {
                   const focusAreas = SPORT_FOCUS_AREAS[sport as Sport] || [];
                   const selected = formData.specialtiesBySport[sport] || [];
                   return (
-                    <div key={sport} className="p-4 bg-[var(--card)] rounded-lg">
-                      <h4 className="font-medium mb-3">{sport}</h4>
-                      <div className="flex flex-wrap gap-2">
+                    <div key={sport} className="p-3 bg-[var(--card)] rounded-lg">
+                      <h4 className="font-medium mb-2 text-sm">{sport}</h4>
+                      <div className="flex flex-wrap gap-1.5">
                         {focusAreas.map((area) => (
                           <button
                             key={area}
@@ -495,7 +433,7 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
                               });
                             }}
                             className={`
-                              px-3 py-1 rounded-full text-sm transition-all
+                              px-2 py-1 rounded-full text-xs transition-all
                               ${selected.includes(area)
                                 ? "bg-blue-500 text-white"
                                 : "bg-gray-700 text-gray-300 hover:bg-gray-600"
@@ -509,6 +447,7 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
                     </div>
                   );
                 })}
+                </div>
               </div>
             )}
           </GradientCard>
@@ -722,21 +661,6 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
           >
             {renderStep6Content()}
           </InteractiveQuestion>
-        );
-
-      case 7:
-        return (
-          <GradientCard>
-            <div className="text-center">
-              <h2 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">Availability</h2>
-              <p className="text-gray-400 text-xl md:text-2xl mb-6">
-                Set your weekly availability. You can update this later from your dashboard.
-              </p>
-              <p className="text-lg text-gray-500">
-                Availability management will be available in your coach dashboard after onboarding.
-              </p>
-            </div>
-          </GradientCard>
         );
 
       default:
