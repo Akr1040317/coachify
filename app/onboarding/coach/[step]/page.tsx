@@ -48,14 +48,14 @@ export default function CoachOnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-[var(--background)] flex flex-col">
       <Navbar />
       
       {/* Background decorative elements */}
       <div className="fixed inset-0 gradient-mesh opacity-30 pointer-events-none" />
       <div className="fixed top-40 right-10 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
       
-      <div className="relative z-10 pt-20">
+      <div className="relative z-10 flex-1 flex items-center justify-center pt-20">
         <CoachOnboarding currentStep={step} userId={userId} isPreSignup={!user} />
       </div>
       
