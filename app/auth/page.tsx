@@ -63,20 +63,10 @@ function AuthPageContent() {
               return;
             }
             
-            // New user signing up directly (shouldn't happen often, but handle it)
-            const roleToUse = selectedRole || "student";
-            
-            try {
-              await createUserData(user.uid, {
-                email: user.email || "",
-                displayName: user.displayName || displayName || "",
-                photoURL: user.photoURL || undefined,
-                role: roleToUse,
-                onboardingCompleted: false,
-              });
-              
-              // Redirect to onboarding
-              router.push(`/onboarding/${roleToUse}/1`);
+            // New user signing in without account - redirect to get-started
+            router.push("/get-started");
+            setLoading(false);
+            return;
             } catch (createError: any) {
               console.error("Error creating user data:", createError);
               if (createError.code === "permission-denied" || createError.message?.includes("permission")) {
