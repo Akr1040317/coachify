@@ -5,13 +5,13 @@ import { getStorage, FirebaseStorage } from "firebase/storage";
 import { getAnalytics, Analytics } from "firebase/analytics";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCiJaNpyvQGJf2_1F5Qat1-ynoB9ClmU5o",
-  authDomain: "coachify-21435.firebaseapp.com",
-  projectId: "coachify-21435",
-  storageBucket: "coachify-21435.firebasestorage.app",
-  messagingSenderId: "274999680644",
-  appId: "1:274999680644:web:2d09f4b311573322f4acd1",
-  measurementId: "G-8D9MWSN2KH"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "",
 };
 
 let app: FirebaseApp | undefined;
