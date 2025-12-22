@@ -11,6 +11,7 @@ import { getCoachData, createCoachData, updateCoachData } from "@/lib/firebase/f
 import { updateUserData } from "@/lib/firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase/config";
+import { checkStripeConnectStatus } from "@/lib/firebase/stripe-helpers";
 
 interface CoachOnboardingProps {
   currentStep: number;
@@ -234,14 +235,38 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
         router.push(`/onboarding/coach/${nextStep}`);
       } else {
         // After last step (step 6), complete onboarding
-        console.log("Onboarding complete, navigating to dashboard");
+        console.log("Onboarding complete, checking payment setup");
         try {
           await updateUserData(userId, { onboardingCompleted: true });
-          router.push("/app/coach/dashboard");
+          
+          // Check if Stripe Connect is set up
+          const stripeStatus = await checkStripeConnectStatus(userId);
+          const canReceivePayments = stripeStatus.status === "active" && stripeStatus.chargesEnabled && stripeStatus.payoutsEnabled;
+          
+          if (!canReceivePayments) {
+            // Redirect to payment setup page
+            console.log("Payment setup not complete, redirecting to Stripe onboarding");
+            router.push("/app/coach/onboarding/stripe?from=onboarding");
+          } else {
+            // Redirect to dashboard
+            router.push("/app/coach/dashboard");
+          }
         } catch (updateError) {
           console.error("Error updating user data:", updateError);
-          // Still redirect to dashboard even if update fails
-          router.push("/app/coach/dashboard");
+          // Check Stripe status even if update fails
+          try {
+            const stripeStatus = await checkStripeConnectStatus(userId);
+            const canReceivePayments = stripeStatus.status === "active" && stripeStatus.chargesEnabled && stripeStatus.payoutsEnabled;
+            
+            if (!canReceivePayments) {
+              router.push("/app/coach/onboarding/stripe?from=onboarding");
+            } else {
+              router.push("/app/coach/dashboard");
+            }
+          } catch (stripeError) {
+            // Fallback to dashboard if Stripe check fails
+            router.push("/app/coach/dashboard");
+          }
         }
       }
     } catch (error) {
@@ -683,3 +708,4 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
     </WizardStepShell>
   );
 }
+

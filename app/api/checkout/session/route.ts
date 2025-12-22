@@ -1,20 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2023-10-16",
-});
+import { getCoachData } from "@/lib/firebase/firestore";
+import { createConnectCheckoutSession } from "@/lib/firebase/payments";
 
 export async function POST(request: NextRequest) {
   try {
-    const { coachId, sessionMinutes, scheduledStart, bookingType } = await request.json();
+    const { coachId, sessionMinutes, scheduledStart, bookingType, userId } = await request.json();
+
+    if (!coachId || !sessionMinutes || !scheduledStart || !userId) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
 
     // Get coach data to determine price
-    const { getCoachData } = await import("@/lib/firebase/firestore");
     const coach = await getCoachData(coachId);
     
     if (!coach) {
       return NextResponse.json({ error: "Coach not found" }, { status: 404 });
+    }
+
+    // Check if coach has Stripe Connect account set up
+    if (!coach.stripeConnectAccountId) {
+      return NextResponse.json({ 
+        error: "Coach payment account not set up",
+        requiresStripeSetup: true 
+      }, { status: 400 });
     }
 
     const sessionOffer = coach.sessionOffers?.paid?.find(p => p.minutes === sessionMinutes);
@@ -22,29 +30,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Session type not available" }, { status: 400 });
     }
 
-    const checkoutSession = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `Coaching Session with ${coach.displayName}`,
-              description: `${sessionMinutes}-minute ${bookingType} session`,
-            },
-            unit_amount: sessionOffer.priceCents,
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "payment",
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/app/student/bookings?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/coach/${coachId}?canceled=true`,
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    
+    // Create Stripe Connect checkout session with platform fee
+    const checkoutSession = await createConnectCheckoutSession({
+      amountCents: sessionOffer.priceCents,
+      currency: sessionOffer.currency || "usd",
+      coachId,
+      productName: `Coaching Session with ${coach.displayName}`,
+      productDescription: `${sessionMinutes}-minute ${bookingType} session`,
+      successUrl: `${baseUrl}/app/student/bookings?success=true`,
+      cancelUrl: `${baseUrl}/coach/${coachId}?canceled=true`,
       metadata: {
+        userId,
         coachId,
         sessionMinutes: sessionMinutes.toString(),
         scheduledStart,
         bookingType,
+        type: "session",
       },
     });
 
@@ -54,3 +57,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

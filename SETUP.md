@@ -117,3 +117,4 @@ vercel
 8. Set up error monitoring (Sentry, etc.)
 9. Add unit and integration tests
 10. Implement caching strategies
+

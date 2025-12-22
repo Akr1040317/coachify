@@ -9,6 +9,7 @@ import { User } from "firebase/auth";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { BadgeVerified } from "@/components/ui/BadgeVerified";
+import { PaymentStatusCard } from "@/components/coach/PaymentStatusCard";
 import Link from "next/link";
 import Image from "next/image";
 
@@ -32,6 +33,13 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
   const [showLearnMoreModal, setShowLearnMoreModal] = useState(false);
   const [courseScroll, setCourseScroll] = useState(0);
   const [articleScroll, setArticleScroll] = useState(0);
+  const [stripeStatus, setStripeStatus] = useState<{
+    hasAccount: boolean;
+    status: string;
+    chargesEnabled: boolean;
+    payoutsEnabled: boolean;
+  } | null>(null);
+  const [pendingEarnings, setPendingEarnings] = useState<number>(0);
 
   useEffect(() => {
     if (activeTab !== undefined) {
@@ -42,11 +50,11 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
       if (user) {
-        setUser(user);
+      setUser(user);
         setUserId(user.uid);
         try {
-          const coach = await getCoachData(user.uid);
-          setCoachData(coach);
+      const coach = await getCoachData(user.uid);
+      setCoachData(coach);
           
           // Load courses, articles, and videos
           if (coach) {
@@ -58,6 +66,10 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
             setCourses(coursesData);
             setArticles(articlesData);
             setFreeVideos(videosData.slice(0, 6));
+
+            // Load Stripe Connect status and pending earnings
+            await loadStripeStatus(user.uid);
+            await loadPendingEarnings(user.uid);
           }
         } catch (error) {
           console.error("Error loading coach data:", error);
@@ -65,7 +77,7 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
           setLoading(false);
         }
       } else {
-        setLoading(false);
+      setLoading(false);
       }
     });
 
@@ -79,6 +91,33 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
     } else {
       setCurrentTab(tab);
     }
+  };
+
+  const loadStripeStatus = async (coachId: string) => {
+    try {
+      const response = await fetch(`/api/coaches/stripe-connect/onboarding?coachId=${coachId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setStripeStatus(data);
+      }
+    } catch (error) {
+      console.error("Error loading Stripe status:", error);
+    }
+  };
+
+  const loadPendingEarnings = async (coachId: string) => {
+    try {
+      const { getPendingPayoutAmount } = await import("@/lib/firebase/payouts");
+      const amount = await getPendingPayoutAmount(coachId);
+      setPendingEarnings(amount);
+    } catch (error) {
+      console.error("Error loading pending earnings:", error);
+    }
+  };
+
+  const handleStripeSetup = async () => {
+    if (!userId) return;
+    window.location.href = "/app/coach/onboarding/stripe";
   };
 
   // Render content based on active tab
@@ -188,16 +227,28 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
             </div>
           </div>
         );
+      case "revenue":
+        return (
+          <div className="p-6 lg:p-8">
+            <div className="max-w-7xl mx-auto">
+              <h2 className="text-3xl font-bold mb-6">Revenue Dashboard</h2>
+              <div className="text-gray-400">Redirecting to revenue page...</div>
+              {typeof window !== "undefined" && (
+                <script dangerouslySetInnerHTML={{ __html: `window.location.href = "/app/coach/dashboard/revenue";` }} />
+              )}
+            </div>
+          </div>
+        );
       case "my-page":
         if (!coachData) {
-          return (
+    return (
             <div className="p-6 lg:p-8">
               <div className="max-w-7xl mx-auto">
                 <div className="text-gray-400">Loading profile...</div>
               </div>
-            </div>
-          );
-        }
+      </div>
+    );
+  }
 
         const price30 = coachData.sessionOffers?.paid?.find((p: any) => p.minutes === 30)?.priceCents 
           ? coachData.sessionOffers.paid.find((p: any) => p.minutes === 30)!.priceCents / 100 
@@ -206,7 +257,7 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
           ? coachData.sessionOffers.paid.find((p: any) => p.minutes === 60)!.priceCents / 100 
           : 0;
 
-        return (
+  return (
           <div className="min-h-[calc(100vh-64px)] bg-[var(--background)] p-6 lg:p-8">
             <div className="max-w-7xl mx-auto space-y-8">
               {/* Top Profile Card */}
@@ -488,7 +539,7 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
                   <GradientCard className="p-4 border-green-500/30 bg-green-500/5">
                     <div className="flex items-center gap-3">
                       <BadgeVerified />
-                      <div>
+          <div>
                         <h3 className="text-white font-semibold mb-1">Verified Coach</h3>
                         <p className="text-gray-400 text-sm">Your profile is verified and visible to students</p>
                       </div>
@@ -513,6 +564,17 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
             )}
           </div>
         </div>
+
+        {/* Stripe Connect Payment Status */}
+        {stripeStatus && (
+          <div className="mb-8">
+            <PaymentStatusCard
+              stripeStatus={stripeStatus}
+              pendingEarnings={pendingEarnings}
+              onSetupClick={handleStripeSetup}
+            />
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -664,7 +726,7 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
                 <p className="text-white font-medium capitalize">
                   {coachData.status === "pending_verification" ? "Pending Verification" : "Active"}
                 </p>
-              </div>
+            </div>
             </div>
           </GradientCard>
         )}
@@ -694,3 +756,4 @@ export default function CoachDashboardWrapper() {
   
   return <CoachDashboard activeTab={activeTab} setActiveTab={setActiveTab} />;
 }
+

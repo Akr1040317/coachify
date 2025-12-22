@@ -83,6 +83,17 @@ const coachNavItems = [
     )
   },
   { 
+    href: "/app/coach/dashboard/revenue", 
+    label: "Revenue", 
+    icon: "revenue", 
+    key: "revenue",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    )
+  },
+  { 
     href: "/app/coach/my-page", 
     label: "My Page", 
     icon: "my-page", 
@@ -100,6 +111,7 @@ const studentNavItems = [
     href: "/app/student/dashboard", 
     label: "Dashboard", 
     icon: "dashboard",
+    key: "dashboard",
     svg: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
@@ -110,6 +122,7 @@ const studentNavItems = [
     href: "/app/student/bookings", 
     label: "Bookings", 
     icon: "bookings",
+    key: "bookings",
     svg: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -120,9 +133,21 @@ const studentNavItems = [
     href: "/app/student/library", 
     label: "Library", 
     icon: "library",
+    key: "library",
     svg: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      </svg>
+    )
+  },
+  { 
+    href: "/app/student/coaches", 
+    label: "Coaches", 
+    icon: "coaches",
+    key: "coaches",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
     )
   },
@@ -369,22 +394,40 @@ export function DashboardLayout({ children, role, activeTab: externalActiveTab, 
           <div className="h-full overflow-y-auto px-4 py-6 flex flex-col">
             <nav className="space-y-2">
               {navItems.map((item) => {
-                const isActive = activeTab === item.key || (item.key !== "messages" && item.key !== "my-page" && item.key !== "dashboard" && pathname === item.href);
+                // Determine active state based on role
+                let isActive = false;
+                if (role === "coach") {
+                  isActive = activeTab === item.key || (item.key !== "messages" && item.key !== "my-page" && item.key !== "dashboard" && pathname === item.href);
+                } else {
+                  // For students, check if it's a tab-based navigation
+                  isActive = activeTab === item.key || Boolean(item.key && !["dashboard", "bookings", "library", "coaches"].includes(item.key) && pathname === item.href);
+                }
                 return (
                   <button
                     key={item.href}
                     onClick={() => {
-                      if (item.key === "messages" || item.key === "my-page" || item.key === "dashboard") {
-                        // Handle as tab state change for single-page navigation tabs
-                        setActiveTab(item.key);
-                        // Update URL without navigation for these tabs
-                        if (typeof window !== "undefined") {
-                          window.history.pushState({}, "", item.href);
+                      // Handle coach-specific tabs
+                      if (role === "coach") {
+                        if (item.key === "messages" || item.key === "my-page" || item.key === "dashboard") {
+                          setActiveTab(item.key);
+                          if (typeof window !== "undefined") {
+                            window.history.pushState({}, "", item.href);
+                          }
+                        } else if (item.key === "offerings") {
+                          router.push("/app/coach/offerings");
+                        } else {
+                          router.push(item.href);
                         }
-                      } else if (item.key === "offerings") {
-                        router.push("/app/coach/offerings");
                       } else {
-                        router.push(item.href);
+                        // Handle student tabs - all are tab-based navigation
+                        if (item.key === "dashboard" || item.key === "bookings" || item.key === "library" || item.key === "coaches") {
+                          setActiveTab(item.key);
+                          if (typeof window !== "undefined") {
+                            window.history.pushState({}, "", item.href);
+                          }
+                        } else {
+                          router.push(item.href);
+                        }
                       }
                     }}
                     className={`
@@ -445,8 +488,8 @@ export function DashboardLayout({ children, role, activeTab: externalActiveTab, 
         </button>
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-64 min-h-[calc(100vh-64px)] pb-20">
-          <div className="h-full">
+        <main className="flex-1 lg:ml-64 min-h-[calc(100vh-64px)] pb-20 w-full overflow-x-hidden">
+          <div className="h-full w-full max-w-full overflow-x-hidden">
             {children}
           </div>
         </main>
@@ -459,3 +502,4 @@ export function DashboardLayout({ children, role, activeTab: externalActiveTab, 
     </div>
   );
 }
+

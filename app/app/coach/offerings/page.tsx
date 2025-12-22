@@ -8,6 +8,8 @@ import { User } from "firebase/auth";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { motion, AnimatePresence } from "framer-motion";
+import { PaymentSetupBlock } from "@/components/coach/PaymentSetupBlock";
+import { checkStripeConnectStatus } from "@/lib/firebase/stripe-helpers";
 
 interface SessionOffering {
   id: string;
@@ -27,6 +29,8 @@ export default function OfferingsPage() {
   const [coachData, setCoachData] = useState<any>(null);
   const [offerings, setOfferings] = useState<SessionOffering[]>([]);
   const [loading, setLoading] = useState(true);
+  const [checkingStripe, setCheckingStripe] = useState(true);
+  const [stripeStatus, setStripeStatus] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingOffering, setEditingOffering] = useState<SessionOffering | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "inactive" | "free" | "paid">("all");
@@ -106,8 +110,9 @@ export default function OfferingsPage() {
       }
     } catch (error) {
       console.error("Error loading offerings:", error);
-    } finally {
+      } finally {
       setLoading(false);
+      setCheckingStripe(false);
     }
   };
 
@@ -225,12 +230,15 @@ export default function OfferingsPage() {
     return true;
   });
 
+  // Check if Stripe Connect is set up
+  const canCreateOfferings = stripeStatus?.status === "active" && stripeStatus?.chargesEnabled && stripeStatus?.payoutsEnabled;
+
   return (
     <DashboardLayout role="coach">
       <div className="min-h-[calc(100vh-64px)] p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
             <div>
               <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
                 Session Offerings
@@ -239,9 +247,21 @@ export default function OfferingsPage() {
                 Create and manage your session types. Customize duration, pricing, and availability.
               </p>
             </div>
-            <GlowButton variant="primary" size="lg" onClick={handleCreateOffering}>
-              + Create Offering
-            </GlowButton>
+            <div className="flex flex-col items-end gap-2">
+              <GlowButton 
+                variant="primary" 
+                size="lg" 
+                onClick={handleCreateOffering}
+                disabled={!canCreateOfferings}
+              >
+                + Create Offering
+              </GlowButton>
+              {!canCreateOfferings && (
+                <p className="text-xs text-orange-400 text-center">
+                  Complete payment setup to create offerings
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Filters */}
@@ -580,3 +600,4 @@ export default function OfferingsPage() {
     </DashboardLayout>
   );
 }
+

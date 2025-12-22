@@ -75,3 +75,4 @@ export const uploadArticleCover = async (file: File, coachId: string, articleId:
   const path = `articles/${coachId}/${articleId}/cover`;
   return uploadFile(file, path);
 };
+

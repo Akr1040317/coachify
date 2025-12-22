@@ -10,6 +10,8 @@ import { User } from "firebase/auth";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { SKILL_LEVELS } from "@/lib/constants/sports";
+import { PaymentSetupBlock } from "@/components/coach/PaymentSetupBlock";
+import { checkStripeConnectStatus } from "@/lib/firebase/stripe-helpers";
 
 export default function NewCoursePage() {
   const router = useRouter();
@@ -17,6 +19,8 @@ export default function NewCoursePage() {
   const [coachData, setCoachData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [stripeStatus, setStripeStatus] = useState<any>(null);
+  const [checkingStripe, setCheckingStripe] = useState(true);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -43,10 +47,15 @@ export default function NewCoursePage() {
           // Set first sport as default
           setFormData((prev) => ({ ...prev, sport: coach.sports[0] }));
         }
+        
+        // Check Stripe Connect status
+        const status = await checkStripeConnectStatus(user.uid);
+        setStripeStatus(status);
       } catch (error) {
         console.error("Error loading coach data:", error);
       } finally {
         setLoading(false);
+        setCheckingStripe(false);
       }
     });
 
@@ -299,3 +308,4 @@ export default function NewCoursePage() {
     </DashboardLayout>
   );
 }
+

@@ -91,6 +91,9 @@ export interface CoachData {
   ratingAvg?: number;
   ratingCount?: number;
   stripeConnectAccountId?: string;
+  stripeConnectStatus?: "pending" | "active" | "restricted";
+  lastPayoutDate?: Timestamp;
+  nextPayoutDate?: Timestamp;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -447,16 +450,47 @@ export const updateBooking = async (bookingId: string, data: Partial<BookingData
 
 // Purchase types and operations
 export interface PurchaseData {
+  id?: string;
   userId: string;
+  coachId: string;
   type: "course" | "paid_video" | "session";
   courseId?: string;
   videoId?: string;
   bookingId?: string;
   amountCents: number;
+  platformFeeCents: number; // NEW
+  coachEarningsCents: number; // NEW
   currency: string;
-  stripeCheckoutSessionId: string;
+  stripePaymentIntentId: string; // NEW
+  stripeCheckoutSessionId?: string; // Keep for backward compatibility
+  stripeTransferId?: string; // NEW (if paid out)
+  payoutId?: string; // NEW (link to payout record)
   status: "pending" | "paid" | "refunded";
   createdAt: Timestamp;
+  paidAt?: Timestamp;
+}
+
+// Payout types and operations
+export interface PayoutData {
+  id?: string;
+  coachId: string;
+  amountCents: number;
+  platformFeeCents: number; // Total fees collected in period
+  transferId: string;
+  status: "pending" | "paid" | "failed";
+  payoutPeriodStart: Timestamp;
+  payoutPeriodEnd: Timestamp;
+  transactionIds: string[]; // All transaction IDs included
+  createdAt: Timestamp;
+  paidAt?: Timestamp;
+  failureReason?: string;
+}
+
+export interface PendingPayoutData {
+  coachId: string;
+  amountCents: number;
+  transactionIds: string[];
+  lastUpdated: Timestamp;
 }
 
 export const createPurchase = async (data: Partial<PurchaseData>): Promise<string> => {
@@ -473,6 +507,22 @@ export const getPurchases = async (constraints: QueryConstraint[] = []): Promise
   const q = query(collection(db, "purchases"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PurchaseData & { id: string }));
+};
+
+export const updatePurchase = async (purchaseId: string, data: Partial<PurchaseData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = doc(db, "purchases", purchaseId);
+  await updateDoc(docRef, data);
+};
+
+export const getPurchase = async (purchaseId: string): Promise<(PurchaseData & { id: string }) | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = doc(db, "purchases", purchaseId);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() } as PurchaseData & { id: string };
+  }
+  return null;
 };
 
 // Enrollment types and operations
@@ -575,3 +625,4 @@ export const getReviews = async (constraints: QueryConstraint[] = []): Promise<(
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReviewData & { id: string }));
 };
+
