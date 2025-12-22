@@ -16,19 +16,116 @@ interface DashboardLayoutProps {
 }
 
 const coachNavItems = [
-  { href: "/app/coach/dashboard", label: "Dashboard", icon: "📊", key: "dashboard" },
-  { href: "/app/coach/bookings", label: "Bookings", icon: "📅", key: "bookings" },
-  { href: "/app/coach/students", label: "Students", icon: "👥", key: "students" },
-  { href: "/app/coach/courses", label: "Courses", icon: "📚", key: "courses" },
-  { href: "/app/coach/content/videos", label: "Content", icon: "🎥", key: "content" },
-  { href: "/app/coach/articles", label: "Articles", icon: "✍️", key: "articles" },
-  { href: "/app/coach/my-page", label: "My Page", icon: "🌐", key: "my-page" },
+  { 
+    href: "/app/coach/dashboard", 
+    label: "Dashboard", 
+    icon: "dashboard", 
+    key: "dashboard",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    )
+  },
+  { 
+    href: "/app/coach/bookings", 
+    label: "Bookings", 
+    icon: "bookings", 
+    key: "bookings",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    )
+  },
+  { 
+    href: "/app/coach/students", 
+    label: "Students", 
+    icon: "students", 
+    key: "students",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+    )
+  },
+  { 
+    href: "/app/coach/courses", 
+    label: "Courses", 
+    icon: "courses", 
+    key: "courses",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      </svg>
+    )
+  },
+  { 
+    href: "/app/coach/offerings", 
+    label: "Offerings", 
+    icon: "offerings", 
+    key: "offerings",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+      </svg>
+    )
+  },
+  { 
+    href: "/app/coach/articles", 
+    label: "Articles", 
+    icon: "articles", 
+    key: "articles",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+    )
+  },
+  { 
+    href: "/app/coach/my-page", 
+    label: "My Page", 
+    icon: "my-page", 
+    key: "my-page",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+      </svg>
+    )
+  },
 ];
 
 const studentNavItems = [
-  { href: "/app/student/dashboard", label: "Dashboard", icon: "📊" },
-  { href: "/app/student/bookings", label: "Bookings", icon: "📅" },
-  { href: "/app/student/library", label: "Library", icon: "📚" },
+  { 
+    href: "/app/student/dashboard", 
+    label: "Dashboard", 
+    icon: "dashboard",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    )
+  },
+  { 
+    href: "/app/student/bookings", 
+    label: "Bookings", 
+    icon: "bookings",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    )
+  },
+  { 
+    href: "/app/student/library", 
+    label: "Library", 
+    icon: "library",
+    svg: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      </svg>
+    )
+  },
 ];
 
 export function DashboardLayout({ children, role, activeTab: externalActiveTab, setActiveTab: externalSetActiveTab }: DashboardLayoutProps) {
@@ -263,11 +360,19 @@ export function DashboardLayout({ children, role, activeTab: externalActiveTab, 
           <div className="h-full overflow-y-auto px-4 py-6 flex flex-col">
             <nav className="space-y-2">
               {navItems.map((item) => {
-                const isActive = activeTab === item.key;
+                const isActive = activeTab === item.key || pathname === item.href;
                 return (
                   <button
                     key={item.href}
-                    onClick={() => setActiveTab(item.key)}
+                    onClick={() => {
+                      if (item.key === "messages" || item.key === "my-page") {
+                        setActiveTab(item.key);
+                      } else if (item.key === "offerings") {
+                        router.push("/app/coach/offerings");
+                      } else {
+                        router.push(item.href);
+                      }
+                    }}
                     className={`
                       w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left
                       ${
@@ -277,7 +382,7 @@ export function DashboardLayout({ children, role, activeTab: externalActiveTab, 
                       }
                     `}
                   >
-                    <span className="text-xl">{item.icon}</span>
+                    {item.svg || <span className="text-xl">{item.icon}</span>}
                     <span className="font-medium">{item.label}</span>
                   </button>
                 );

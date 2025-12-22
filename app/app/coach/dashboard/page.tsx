@@ -28,6 +28,7 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
   const [loading, setLoading] = useState(true);
   const [currentTab, setCurrentTab] = useState(activeTab);
   const [userId, setUserId] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [showLearnMoreModal, setShowLearnMoreModal] = useState(false);
   const [courseScroll, setCourseScroll] = useState(0);
   const [articleScroll, setArticleScroll] = useState(0);
@@ -41,6 +42,7 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
       if (user) {
+        setUser(user);
         setUserId(user.uid);
         try {
           const coach = await getCoachData(user.uid);
@@ -160,14 +162,15 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
             </div>
           </div>
         );
-      case "content":
+      case "offerings":
+        // Redirect to the offerings page
+        if (typeof window !== "undefined") {
+          window.location.href = "/app/coach/offerings";
+        }
         return (
           <div className="p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
-              <h2 className="text-3xl font-bold mb-6">Content</h2>
-              <GradientCard className="p-8">
-                <p className="text-gray-400">Your content will appear here.</p>
-              </GradientCard>
+              <div className="text-gray-400">Redirecting to offerings...</div>
             </div>
           </div>
         );
@@ -208,21 +211,32 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
                 <div className="flex flex-col lg:flex-row gap-8">
                   {/* Left: Profile Image and Basic Info */}
                   <div className="flex-shrink-0">
-                    {coachData.avatarUrl ? (
-                      <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-blue-500/30">
-                        <Image
-                          src={coachData.avatarUrl}
-                          alt={coachData.displayName}
-                          width={128}
-                          height={128}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-32 h-32 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-4xl font-bold border-4 border-blue-500/30">
-                        {(coachData.displayName || "C")[0].toUpperCase()}
-                      </div>
-                    )}
+                    {(() => {
+                      // Prioritize avatarUrl from Firestore, fallback to Google photoURL
+                      const profileImageUrl = (coachData?.avatarUrl && coachData.avatarUrl.trim() !== "") 
+                        ? coachData.avatarUrl 
+                        : (user?.photoURL || null);
+                      
+                      console.log("Profile image debug:", { 
+                        avatarUrl: coachData?.avatarUrl, 
+                        photoURL: user?.photoURL, 
+                        finalUrl: profileImageUrl 
+                      });
+                      
+                      return profileImageUrl ? (
+                        <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-blue-500/30">
+                          <img
+                            src={profileImageUrl}
+                            alt={coachData.displayName}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-32 h-32 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white text-4xl font-bold border-4 border-blue-500/30">
+                          {(coachData.displayName || "C")[0].toUpperCase()}
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Center: Name, Title, Description */}
@@ -318,13 +332,13 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
               </div>
 
               {/* Courses Carousel */}
-              {courses.length > 0 && (
-                <div>
-                  <h2 className="text-2xl font-bold mb-4">Courses</h2>
-                  <div className="relative">
-                    <div className="overflow-x-auto scrollbar-hide scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                      <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
-                        {courses.map((course) => (
+              <div>
+                <h2 className="text-2xl font-bold mb-4">Courses</h2>
+                <div className="relative">
+                  <div className="overflow-x-auto scrollbar-hide scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
+                      {courses.length > 0 ? (
+                        courses.map((course) => (
                           <Link key={course.id} href={`/course/${course.id}`} className="flex-shrink-0 w-80">
                             <GradientCard className="p-6 h-full hover:scale-105 transition-transform cursor-pointer">
                               <h3 className="text-xl font-bold mb-2">{course.title}</h3>
@@ -336,76 +350,105 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
                               )}
                             </GradientCard>
                           </Link>
-                        ))}
-                      </div>
+                        ))
+                      ) : (
+                        // Placeholder card matching the course card style
+                        <div className="flex-shrink-0 w-80">
+                          <GradientCard className="p-6 h-full opacity-60">
+                            <div className="flex items-center justify-center mb-2">
+                              <svg className="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                              </svg>
+                            </div>
+                            <h3 className="text-xl font-bold mb-2 text-gray-500">No courses yet</h3>
+                            <p className="text-gray-500 text-sm mb-4 line-clamp-3">Create your first course to share your expertise with students</p>
+                            <p className="text-gray-600 text-sm">Coming soon</p>
+                          </GradientCard>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Articles Carousel */}
-              {articles.length > 0 && (
-                <div>
-                  <h2 className="text-2xl font-bold mb-4">Articles</h2>
-                  <div className="relative">
-                    <div className="overflow-x-auto scrollbar-hide scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                      <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
-                        {articles.map((article) => (
+              <div>
+                <h2 className="text-2xl font-bold mb-4">Articles</h2>
+                <div className="relative">
+                  <div className="overflow-x-auto scrollbar-hide scroll-smooth" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                    <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
+                      {articles.length > 0 ? (
+                        articles.map((article) => (
                           <Link key={article.id} href={`/article/${article.slug}`} className="flex-shrink-0 w-80">
                             <GradientCard className="p-6 h-full hover:scale-105 transition-transform cursor-pointer">
                               <h3 className="text-xl font-bold mb-2">{article.title}</h3>
                               <p className="text-gray-400 text-sm line-clamp-3">{article.excerpt || "Read more..."}</p>
                             </GradientCard>
                           </Link>
-                        ))}
-                      </div>
+                        ))
+                      ) : (
+                        // Placeholder card matching the article card style
+                        <div className="flex-shrink-0 w-80">
+                          <GradientCard className="p-6 h-full opacity-60">
+                            <div className="flex items-center justify-center mb-2">
+                              <svg className="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </div>
+                            <h3 className="text-xl font-bold mb-2 text-gray-500">No articles yet</h3>
+                            <p className="text-gray-500 text-sm line-clamp-3">Write articles to share your knowledge and attract more students</p>
+                          </GradientCard>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Learn More Modal */}
               {showLearnMoreModal && (
                 <>
                   <div
-                    className="fixed inset-0 bg-black/50 z-50"
+                    className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
                     onClick={() => setShowLearnMoreModal(false)}
                   />
-                  <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-                    <GradientCard className="max-w-2xl w-full max-h-[80vh] overflow-y-auto p-8">
-                      <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-3xl font-bold">Experience & Credentials</h2>
-                        <button
-                          onClick={() => setShowLearnMoreModal(false)}
-                          className="p-2 text-gray-400 hover:text-white transition-colors"
-                        >
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                      
-                      {coachData.experienceType && (
-                        <div className="mb-6">
-                          <h3 className="text-xl font-semibold mb-3">Experience Type</h3>
-                          <p className="text-gray-300">{coachData.experienceType}</p>
+                  <div className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none">
+                    <div className="pointer-events-auto max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                      <GradientCard className="p-8 bg-[var(--card)] border-2 border-gray-700 shadow-2xl">
+                        <div className="flex items-center justify-between mb-6">
+                          <h2 className="text-3xl font-bold text-white">Experience & Credentials</h2>
+                          <button
+                            onClick={() => setShowLearnMoreModal(false)}
+                            className="p-2 text-gray-400 hover:text-white transition-colors"
+                          >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
                         </div>
-                      )}
-                      
-                      {coachData.credentials && coachData.credentials.length > 0 && (
-                        <div>
-                          <h3 className="text-xl font-semibold mb-3">Credentials</h3>
-                          <ul className="space-y-2">
-                            {coachData.credentials.map((cred: string, idx: number) => (
-                              <li key={idx} className="text-gray-300 flex items-start gap-2">
-                                <span className="text-blue-400 mt-1">•</span>
-                                <span>{cred}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </GradientCard>
+                        
+                        {coachData.experienceType && (
+                          <div className="mb-6">
+                            <h3 className="text-xl font-semibold mb-3 text-white">Experience Type</h3>
+                            <p className="text-gray-300">{coachData.experienceType}</p>
+                          </div>
+                        )}
+                        
+                        {coachData.credentials && coachData.credentials.length > 0 && (
+                          <div>
+                            <h3 className="text-xl font-semibold mb-3 text-white">Credentials</h3>
+                            <ul className="space-y-2">
+                              {coachData.credentials.map((cred: string, idx: number) => (
+                                <li key={idx} className="text-gray-300 flex items-start gap-2">
+                                  <span className="text-blue-400 mt-1">•</span>
+                                  <span>{cred}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </GradientCard>
+                    </div>
                   </div>
                 </>
               )}
@@ -471,7 +514,9 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
         <div className="grid md:grid-cols-2 gap-6 mb-8">
           <GradientCard className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="text-3xl">📅</div>
+              <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
               <div className="text-2xl font-bold text-blue-400">0</div>
             </div>
             <h3 className="text-lg font-semibold mb-1">Upcoming Sessions</h3>
@@ -480,7 +525,9 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
 
           <GradientCard className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="text-3xl">👥</div>
+              <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
               <div className="text-2xl font-bold text-purple-400">0</div>
             </div>
             <h3 className="text-lg font-semibold mb-1">Total Students</h3>
@@ -488,62 +535,104 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
           </GradientCard>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <GradientCard className="p-6 hover:scale-105 transition-transform cursor-pointer">
-            <button onClick={() => handleTabChange("bookings")} className="block w-full text-left">
-              <div className="text-4xl mb-4">📅</div>
-              <h3 className="text-xl font-bold mb-2">Manage Bookings</h3>
-              <p className="text-gray-400 mb-4">View and manage your upcoming sessions</p>
-              <GlowButton variant="outline" size="sm">View Bookings →</GlowButton>
-            </button>
-          </GradientCard>
+          {/* Quick Actions */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <GradientCard 
+              className="p-6 hover:scale-105 transition-transform cursor-pointer"
+              onClick={() => handleTabChange("bookings")}
+            >
+              <div className="text-left">
+                <div className="text-4xl mb-4">📅</div>
+                <h3 className="text-xl font-bold mb-2">Manage Bookings</h3>
+                <p className="text-gray-400 mb-4">View and manage your upcoming sessions</p>
+                <div onClick={(e) => { e.stopPropagation(); handleTabChange("bookings"); }}>
+                  <GlowButton variant="outline" size="sm">View Bookings →</GlowButton>
+                </div>
+              </div>
+            </GradientCard>
 
-          <GradientCard className="p-6 hover:scale-105 transition-transform cursor-pointer">
-            <button onClick={() => handleTabChange("students")} className="block w-full text-left">
-              <div className="text-4xl mb-4">👥</div>
-              <h3 className="text-xl font-bold mb-2">My Students</h3>
-              <p className="text-gray-400 mb-4">Connect with your students</p>
-              <GlowButton variant="outline" size="sm">View Students →</GlowButton>
-            </button>
-          </GradientCard>
+            <GradientCard 
+              className="p-6 hover:scale-105 transition-transform cursor-pointer"
+              onClick={() => handleTabChange("students")}
+            >
+              <div className="text-left">
+                <div className="text-4xl mb-4">👥</div>
+                <h3 className="text-xl font-bold mb-2">My Students</h3>
+                <p className="text-gray-400 mb-4">Connect with your students</p>
+                <div onClick={(e) => { e.stopPropagation(); handleTabChange("students"); }}>
+                  <GlowButton variant="outline" size="sm">View Students →</GlowButton>
+                </div>
+              </div>
+            </GradientCard>
 
-          <GradientCard className="p-6 hover:scale-105 transition-transform cursor-pointer">
-            <button onClick={() => handleTabChange("courses")} className="block w-full text-left">
-              <div className="text-4xl mb-4">📚</div>
-              <h3 className="text-xl font-bold mb-2">Create Course</h3>
-              <p className="text-gray-400 mb-4">Build and publish new courses</p>
-              <GlowButton variant="outline" size="sm">Create Course →</GlowButton>
-            </button>
-          </GradientCard>
+            <GradientCard 
+              className="p-6 hover:scale-105 transition-transform cursor-pointer"
+              onClick={() => handleTabChange("courses")}
+            >
+              <div className="text-left">
+                <div className="mb-4">
+                  <svg className="w-10 h-10 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-2">Create Course</h3>
+                <p className="text-gray-400 mb-4">Build and publish new courses</p>
+                <div onClick={(e) => { e.stopPropagation(); handleTabChange("courses"); }}>
+                  <GlowButton variant="outline" size="sm">Create Course →</GlowButton>
+                </div>
+              </div>
+            </GradientCard>
 
-          <GradientCard className="p-6 hover:scale-105 transition-transform cursor-pointer">
-            <button onClick={() => handleTabChange("content")} className="block w-full text-left">
-              <div className="text-4xl mb-4">🎥</div>
-              <h3 className="text-xl font-bold mb-2">Manage Content</h3>
-              <p className="text-gray-400 mb-4">Upload videos and create content</p>
-              <GlowButton variant="outline" size="sm">Manage Content →</GlowButton>
-            </button>
-          </GradientCard>
+            <GradientCard 
+              className="p-6 hover:scale-105 transition-transform cursor-pointer"
+              onClick={() => handleTabChange("offerings")}
+            >
+              <div className="text-left">
+                <div className="mb-4">
+                  <svg className="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-2">Manage Offerings</h3>
+                <p className="text-gray-400 mb-4">Create and customize session types</p>
+                <div onClick={(e) => { e.stopPropagation(); handleTabChange("offerings"); }}>
+                  <GlowButton variant="outline" size="sm">Manage Offerings →</GlowButton>
+                </div>
+              </div>
+            </GradientCard>
 
-          <GradientCard className="p-6 hover:scale-105 transition-transform cursor-pointer">
-            <button onClick={() => handleTabChange("articles")} className="block w-full text-left">
-              <div className="text-4xl mb-4">✍️</div>
-              <h3 className="text-xl font-bold mb-2">Write Article</h3>
-              <p className="text-gray-400 mb-4">Share your expertise</p>
-              <GlowButton variant="outline" size="sm">Write Article →</GlowButton>
-            </button>
-          </GradientCard>
+            <GradientCard 
+              className="p-6 hover:scale-105 transition-transform cursor-pointer"
+              onClick={() => handleTabChange("articles")}
+            >
+              <div className="text-left">
+                <div className="mb-4">
+                  <svg className="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold mb-2">Write Article</h3>
+                <p className="text-gray-400 mb-4">Share your expertise</p>
+                <div onClick={(e) => { e.stopPropagation(); handleTabChange("articles"); }}>
+                  <GlowButton variant="outline" size="sm">Write Article →</GlowButton>
+                </div>
+              </div>
+            </GradientCard>
 
-          <GradientCard className="p-6 hover:scale-105 transition-transform cursor-pointer">
-            <button onClick={() => handleTabChange("my-page")} className="block w-full text-left">
-              <div className="text-4xl mb-4">🌐</div>
-              <h3 className="text-xl font-bold mb-2">My Page</h3>
-              <p className="text-gray-400 mb-4">View your public profile</p>
-              <GlowButton variant="outline" size="sm">View My Page →</GlowButton>
-            </button>
-          </GradientCard>
-        </div>
+            <GradientCard 
+              className="p-6 hover:scale-105 transition-transform cursor-pointer"
+              onClick={() => handleTabChange("my-page")}
+            >
+              <div className="text-left">
+                <div className="text-4xl mb-4">🌐</div>
+                <h3 className="text-xl font-bold mb-2">My Page</h3>
+                <p className="text-gray-400 mb-4">View your public profile</p>
+                <div onClick={(e) => { e.stopPropagation(); handleTabChange("my-page"); }}>
+                  <GlowButton variant="outline" size="sm">View My Page →</GlowButton>
+                </div>
+              </div>
+            </GradientCard>
+          </div>
 
         {/* Profile Overview */}
         {coachData && (

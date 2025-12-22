@@ -48,7 +48,7 @@ service cloud.firestore {
       allow read: if isOwner(coachId);
       // Coaches can create their own data
       allow create: if isAuthenticated() && isOwner(coachId);
-      // Coaches can update their own data
+      // Coaches can update their own data (including customOfferings)
       allow update: if isAuthenticated() && isOwner(coachId);
     }
     

@@ -76,6 +76,18 @@ export interface CoachData {
     freeIntroMinutes: number;
     paid: Array<{ minutes: number; priceCents: number; currency: string }>;
   };
+  customOfferings?: Array<{
+    id: string;
+    name: string;
+    description: string;
+    durationMinutes: number;
+    priceCents: number;
+    currency: string;
+    isFree: boolean;
+    isActive: boolean;
+    bufferMinutes?: number;
+    color?: string;
+  }>;
   ratingAvg?: number;
   ratingCount?: number;
   stripeConnectAccountId?: string;
