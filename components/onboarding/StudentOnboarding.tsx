@@ -6,7 +6,7 @@ import { WizardStepShell } from "@/components/ui/WizardStepShell";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { SportIconCard } from "@/components/ui/SportIconCard";
 import { GlowButton } from "@/components/ui/GlowButton";
-import { SPORTS, SPORT_FOCUS_AREAS, SKILL_LEVELS, STUDENT_GOALS, type Sport, type SkillLevel, type StudentGoal } from "@/lib/constants/sports";
+import { SPORTS, SPORT_FOCUS_AREAS, SKILL_LEVELS, SKILL_LEVEL_DESCRIPTIONS, STUDENT_GOALS, type Sport, type SkillLevel, type StudentGoal } from "@/lib/constants/sports";
 import { getStudentData, createStudentData, updateStudentData } from "@/lib/firebase/firestore";
 import { updateUserData } from "@/lib/firebase/firestore";
 
@@ -38,7 +38,7 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
     language: "",
   });
 
-  const totalSteps = 8;
+  const totalSteps = 7; // Reduced from 8 - removed preferences step
 
   useEffect(() => {
     // Load existing data
@@ -57,12 +57,13 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
           goals: studentData.goals || [],
           successIn3Months: studentData.successIn3Months || "",
           focusAreas: studentData.focusAreas || [],
-          coachingStyle: studentData.preferences?.coachingStyle || [],
-          sessionLength: studentData.preferences?.sessionLength || [],
-          budgetMin: studentData.preferences?.budgetRangeCents?.min ? studentData.preferences.budgetRangeCents.min / 100 : 0,
-          budgetMax: studentData.preferences?.budgetRangeCents?.max ? studentData.preferences.budgetRangeCents.max / 100 : 100,
-          availability: studentData.preferences?.availability || [],
-          language: studentData.preferences?.language || "",
+          // Removed preferences fields - no longer used
+          coachingStyle: [],
+          sessionLength: [],
+          budgetMin: 0,
+          budgetMax: 100,
+          availability: [],
+          language: "",
         });
       }
     };
@@ -70,33 +71,59 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
   }, [userId]);
 
   const saveData = async () => {
-    const studentData = {
+    // Build student data object, filtering out undefined values
+    const studentData: any = {
       age: formData.age,
       sports: formData.sports,
-      primarySport: formData.primarySport,
-      level: formData.level,
-      yearsExperience: formData.yearsExperience ? parseInt(formData.yearsExperience) : undefined,
+      primarySport: formData.primarySport || null,
+      level: formData.level || null,
       goals: formData.goals,
-      successIn3Months: formData.successIn3Months,
+      successIn3Months: formData.successIn3Months || null,
       focusAreas: formData.focusAreas,
-      preferences: {
-        coachingStyle: formData.coachingStyle,
-        sessionLength: formData.sessionLength,
-        budgetRangeCents: {
-          min: formData.budgetMin * 100,
-          max: formData.budgetMax * 100,
-        },
-        availability: formData.availability,
-        language: formData.language || undefined,
-      },
+      // Removed preferences - no longer collecting coaching style, session length, budget, or availability
     };
+
+    // Only add yearsExperience if it has a value
+    if (formData.yearsExperience && formData.yearsExperience.trim() !== "") {
+      const parsed = parseInt(formData.yearsExperience);
+      if (!isNaN(parsed)) {
+        studentData.yearsExperience = parsed;
+      }
+    }
+
+    // Only add language if it has a value
+    if (formData.language && formData.language.trim() !== "") {
+      studentData.preferences.language = formData.language;
+    }
+
+    // Filter out undefined values recursively
+    const cleanData = (obj: any): any => {
+      if (obj === null || obj === undefined) {
+        return null;
+      }
+      if (Array.isArray(obj)) {
+        return obj.map(cleanData);
+      }
+      if (typeof obj === "object") {
+        const cleaned: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+          if (value !== undefined) {
+            cleaned[key] = cleanData(value);
+          }
+        }
+        return cleaned;
+      }
+      return obj;
+    };
+
+    const cleanedStudentData = cleanData(studentData);
 
     // Always save to Firestore (user is authenticated)
     const existing = await getStudentData(userId);
     if (existing) {
-      await updateStudentData(userId, studentData);
+      await updateStudentData(userId, cleanedStudentData);
     } else {
-      await createStudentData(userId, studentData);
+      await createStudentData(userId, cleanedStudentData);
     }
   };
 
@@ -156,9 +183,7 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
       case 6:
         return formData.focusAreas.length > 0;
       case 7:
-        return formData.coachingStyle.length > 0 && formData.sessionLength.length > 0;
-      case 8:
-        return true;
+        return true; // Final step
       default:
         return false;
     }
@@ -285,7 +310,8 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
                     }
                   `}
                 >
-                  <div className="font-semibold">{level}</div>
+                  <div className="font-semibold text-lg mb-1">{level}</div>
+                  <div className="text-sm text-gray-400">{SKILL_LEVEL_DESCRIPTIONS[level]}</div>
                 </button>
               ))}
               <div className="mt-6">
@@ -308,7 +334,7 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
           <GradientCard>
             <h2 className="text-2xl font-bold mb-4">What are your goals?</h2>
             <p className="text-gray-400 mb-6 text-sm">Select all that apply</p>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {STUDENT_GOALS.map((goal) => (
                 <button
                   key={goal}
@@ -319,14 +345,14 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
                     setFormData({ ...formData, goals: newGoals });
                   }}
                   className={`
-                    w-full p-3 rounded-lg border-2 text-left transition-all
+                    p-4 rounded-lg border-2 text-left transition-all
                     ${formData.goals.includes(goal)
                       ? "border-blue-500 bg-blue-500/10"
                       : "border-gray-600 hover:border-gray-500"
                     }
                   `}
                 >
-                  {goal}
+                  <div className="font-medium">{goal}</div>
                 </button>
               ))}
             </div>
@@ -352,7 +378,7 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
             <p className="text-gray-400 mb-6 text-sm">
               What would you like to focus on in {formData.primarySport}? (Select all that apply)
             </p>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {focusAreas.map((area) => (
                 <button
                   key={area}
@@ -363,14 +389,14 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
                     setFormData({ ...formData, focusAreas: newAreas });
                   }}
                   className={`
-                    w-full p-3 rounded-lg border-2 text-left transition-all
+                    p-4 rounded-lg border-2 text-left transition-all
                     ${formData.focusAreas.includes(area)
                       ? "border-blue-500 bg-blue-500/10"
                       : "border-gray-600 hover:border-gray-500"
                     }
                   `}
                 >
-                  {area}
+                  <div className="font-medium text-sm">{area}</div>
                 </button>
               ))}
             </div>
@@ -378,116 +404,6 @@ export function StudentOnboarding({ currentStep, userId, isPreSignup = false }: 
         );
 
       case 7:
-        return (
-          <GradientCard>
-            <h2 className="text-2xl font-bold mb-4">Preferences and Constraints</h2>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium mb-3">Preferred coaching style</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {["Encouraging", "Direct", "Technical", "High intensity"].map((style) => (
-                    <button
-                      key={style}
-                      onClick={() => {
-                        const newStyles = formData.coachingStyle.includes(style)
-                          ? formData.coachingStyle.filter((s) => s !== style)
-                          : [...formData.coachingStyle, style];
-                        setFormData({ ...formData, coachingStyle: newStyles });
-                      }}
-                      className={`
-                        p-3 rounded-lg border-2 transition-all
-                        ${formData.coachingStyle.includes(style)
-                          ? "border-blue-500 bg-blue-500/10"
-                          : "border-gray-600 hover:border-gray-500"
-                        }
-                      `}
-                    >
-                      {style}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-3">Session format</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[30, 60, 90].map((minutes) => (
-                    <button
-                      key={minutes}
-                      onClick={() => {
-                        const newLengths = formData.sessionLength.includes(minutes)
-                          ? formData.sessionLength.filter((l) => l !== minutes)
-                          : [...formData.sessionLength, minutes];
-                        setFormData({ ...formData, sessionLength: newLengths });
-                      }}
-                      className={`
-                        p-3 rounded-lg border-2 transition-all
-                        ${formData.sessionLength.includes(minutes)
-                          ? "border-blue-500 bg-blue-500/10"
-                          : "border-gray-600 hover:border-gray-500"
-                        }
-                      `}
-                    >
-                      {minutes} min
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-3">
-                  Budget range: ${formData.budgetMin} - ${formData.budgetMax} per session
-                </label>
-                <div className="space-y-2">
-                  <input
-                    type="range"
-                    min="0"
-                    max="200"
-                    value={formData.budgetMin}
-                    onChange={(e) => setFormData({ ...formData, budgetMin: parseInt(e.target.value) })}
-                    className="w-full"
-                  />
-                  <input
-                    type="range"
-                    min="0"
-                    max="200"
-                    value={formData.budgetMax}
-                    onChange={(e) => setFormData({ ...formData, budgetMax: parseInt(e.target.value) })}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-3">Availability preference</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {["Weekdays", "Weekends", "Evenings"].map((avail) => (
-                    <button
-                      key={avail}
-                      onClick={() => {
-                        const newAvail = formData.availability.includes(avail)
-                          ? formData.availability.filter((a) => a !== avail)
-                          : [...formData.availability, avail];
-                        setFormData({ ...formData, availability: newAvail });
-                      }}
-                      className={`
-                        p-3 rounded-lg border-2 transition-all
-                        ${formData.availability.includes(avail)
-                          ? "border-blue-500 bg-blue-500/10"
-                          : "border-gray-600 hover:border-gray-500"
-                        }
-                      `}
-                    >
-                      {avail}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </GradientCard>
-        );
-
-      case 8:
         return (
           <GradientCard>
             <h2 className="text-3xl font-bold mb-4">You&apos;re all set! 🎉</h2>

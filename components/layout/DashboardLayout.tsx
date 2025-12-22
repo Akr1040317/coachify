@@ -190,10 +190,19 @@ export function DashboardLayout({ children, role, activeTab: externalActiveTab, 
 
   const handleLogout = async () => {
     try {
+      setUserMenuOpen(false);
       await signOut();
+      // Clear any local storage
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("userId");
+      }
+      // Redirect to home page
       router.push("/");
+      // Force a hard reload to ensure all state is cleared
+      window.location.href = "/";
     } catch (error) {
       console.error("Error signing out:", error);
+      alert("Failed to sign out. Please try again.");
     }
   };
 
@@ -360,13 +369,18 @@ export function DashboardLayout({ children, role, activeTab: externalActiveTab, 
           <div className="h-full overflow-y-auto px-4 py-6 flex flex-col">
             <nav className="space-y-2">
               {navItems.map((item) => {
-                const isActive = activeTab === item.key || pathname === item.href;
+                const isActive = activeTab === item.key || (item.key !== "messages" && item.key !== "my-page" && item.key !== "dashboard" && pathname === item.href);
                 return (
                   <button
                     key={item.href}
                     onClick={() => {
-                      if (item.key === "messages" || item.key === "my-page") {
+                      if (item.key === "messages" || item.key === "my-page" || item.key === "dashboard") {
+                        // Handle as tab state change for single-page navigation tabs
                         setActiveTab(item.key);
+                        // Update URL without navigation for these tabs
+                        if (typeof window !== "undefined") {
+                          window.history.pushState({}, "", item.href);
+                        }
                       } else if (item.key === "offerings") {
                         router.push("/app/coach/offerings");
                       } else {

@@ -155,6 +155,13 @@ export const SKILL_LEVELS = [
 
 export type SkillLevel = typeof SKILL_LEVELS[number];
 
+export const SKILL_LEVEL_DESCRIPTIONS: Record<string, string> = {
+  Beginner: "New to the sport or have minimal experience. Learning basic fundamentals and rules.",
+  Intermediate: "Have some experience and can perform basic skills consistently. Ready to refine technique and learn more advanced concepts.",
+  Advanced: "Experienced player with solid fundamentals. Working on advanced techniques, strategy, and consistency at a higher level.",
+  Competitive: "Competing at a high level (club teams, tournaments, leagues). Focused on performance optimization and competitive edge.",
+};
+
 export const STUDENT_GOALS = [
   "Make school team",
   "Make club team",

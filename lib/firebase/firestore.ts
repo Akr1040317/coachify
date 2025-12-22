@@ -213,6 +213,9 @@ export interface CourseData {
   currency: string;
   thumbnailUrl?: string;
   previewVideoUrl?: string;
+  videoIds?: string[]; // Array of video IDs in order
+  articleIds?: string[]; // Array of article IDs in order
+  estimatedMinutes?: number; // Total estimated time for the course
   isPublished: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -261,6 +264,12 @@ export const updateCourse = async (courseId: string, data: Partial<CourseData>):
     ...data,
     updatedAt: serverTimestamp(),
   });
+};
+
+export const deleteCourse = async (courseId: string): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = doc(db, "courses", courseId);
+  await deleteDoc(docRef);
 };
 
 export const getCourseLessons = async (courseId: string): Promise<(LessonData & { id: string })[]> => {

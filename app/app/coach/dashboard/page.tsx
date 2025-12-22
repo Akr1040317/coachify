@@ -34,10 +34,10 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
   const [articleScroll, setArticleScroll] = useState(0);
 
   useEffect(() => {
-    if (setActiveTab) {
+    if (activeTab !== undefined) {
       setCurrentTab(activeTab);
     }
-  }, [activeTab, setActiveTab]);
+  }, [activeTab]);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -83,7 +83,10 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
 
   // Render content based on active tab
   const renderContent = () => {
+    // Use currentTab for rendering since it updates immediately when tabs change
     switch (currentTab) {
+      case "dashboard":
+        return renderDashboard();
       case "messages":
         return (
           <div className="min-h-[calc(100vh-64px)] p-6 lg:p-8">
@@ -456,6 +459,7 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
           </div>
         );
       default:
+        // Default to dashboard view
         return renderDashboard();
     }
   };
@@ -668,8 +672,17 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
     </div>
   );
 
+  const handleTabChangeFromLayout = (tab: string) => {
+    // Update local state immediately for rendering
+    setCurrentTab(tab);
+    // Also update parent state if provided
+    if (setActiveTab) {
+      setActiveTab(tab);
+    }
+  };
+
   return (
-    <DashboardLayout role="coach" activeTab={currentTab} setActiveTab={handleTabChange}>
+    <DashboardLayout role="coach" activeTab={currentTab} setActiveTab={handleTabChangeFromLayout}>
       {renderContent()}
     </DashboardLayout>
   );
