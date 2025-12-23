@@ -234,7 +234,7 @@ export default function CoachRevenuePage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowVerificationModal(true)}
-                  glowColor="yellow"
+                  glowColor="orange"
                 >
                   View Details
                 </GlowButton>
