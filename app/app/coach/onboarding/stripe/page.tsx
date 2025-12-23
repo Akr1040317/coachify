@@ -163,7 +163,7 @@ export default function StripeOnboardingPage() {
                 Your Stripe account is set up and ready. You&apos;ll receive weekly payouts every Monday for your earnings.
               </p>
               <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6 mb-6">
-                <h3 className="font-semibold text-white mb-2">What's Next?</h3>
+                <h3 className="font-semibold text-white mb-2">What&apos;s Next?</h3>
                 <ul className="text-left space-y-2 text-gray-300 text-sm">
                   <li>✓ Create courses and offerings to start earning</li>
                   <li>✓ View your revenue dashboard to track earnings</li>
@@ -327,4 +327,5 @@ export default function StripeOnboardingPage() {
     </div>
   );
 }
+
 
