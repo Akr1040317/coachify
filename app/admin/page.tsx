@@ -6,7 +6,8 @@ import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
 import { getUserData, getCoaches, getDisputes } from "@/lib/firebase/firestore";
 import { where } from "firebase/firestore";
-import { getHighRiskCoaches } from "@/lib/risk/risk-monitoring";
+import { getHighRiskCoaches, type RiskScore } from "@/lib/risk/risk-monitoring";
+import { type CoachData } from "@/lib/firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import Link from "next/link";
@@ -15,6 +16,8 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [highRiskCoaches, setHighRiskCoaches] = useState<(RiskScore & { coach: CoachData & { id: string } })[]>([]);
+  const [activeDisputes, setActiveDisputes] = useState(0);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -71,7 +74,7 @@ export default function AdminDashboard() {
         {(highRiskCoaches.length > 0 || activeDisputes > 0) && (
           <div className="mb-6 space-y-4">
             {highRiskCoaches.length > 0 && (
-              <GradientCard gradient="red" className="border-red-500/30">
+              <GradientCard gradient="orange" className="border-red-500/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xl font-bold mb-2">⚠️ High-Risk Coaches Detected</h3>
@@ -88,14 +91,14 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <Link href="/admin/coaches">
-                    <GlowButton variant="outline" glowColor="red">Review Coaches</GlowButton>
+                    <GlowButton variant="outline" glowColor="orange">Review Coaches</GlowButton>
                   </Link>
                 </div>
               </GradientCard>
             )}
             
             {activeDisputes > 0 && (
-              <GradientCard gradient="red" className="border-red-500/30">
+              <GradientCard gradient="orange" className="border-red-500/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-xl font-bold mb-2">⚠️ Active Disputes Requiring Response</h3>
@@ -105,7 +108,7 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                   <Link href="/admin/disputes">
-                    <GlowButton variant="outline" glowColor="red">Manage Disputes</GlowButton>
+                    <GlowButton variant="outline" glowColor="orange">Manage Disputes</GlowButton>
                   </Link>
                 </div>
               </GradientCard>
@@ -155,7 +158,7 @@ export default function AdminDashboard() {
           </Link>
 
           <Link href="/admin/disputes">
-            <GradientCard gradient="red" glow className="cursor-pointer hover:scale-105 transition-transform">
+            <GradientCard gradient="orange" glow className="cursor-pointer hover:scale-105 transition-transform">
               <h2 className="text-2xl font-bold mb-4">Disputes & Chargebacks</h2>
               <p className="text-gray-400 mb-4">
                 Manage refunds, chargebacks, and disputes. You are responsible for handling these.
@@ -168,3 +171,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

@@ -200,11 +200,11 @@ export const updateCoachData = async (coachId: string, data: Partial<CoachData>)
   });
 };
 
-export const getCoaches = async (constraints: QueryConstraint[] = []): Promise<CoachData[]> => {
+export const getCoaches = async (constraints: QueryConstraint[] = []): Promise<(CoachData & { id: string })[]> => {
   if (!db) throw new Error("Firestore is not initialized");
   const q = query(collection(db, "coaches"), ...constraints);
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => doc.data() as CoachData);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CoachData & { id: string }));
 };
 
 // Course types and operations
