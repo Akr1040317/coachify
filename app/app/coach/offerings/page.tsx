@@ -69,46 +69,12 @@ export default function OfferingsPage() {
       const coach = await getCoachData(coachId);
       setCoachData(coach);
       
-      // Load offerings from coach data
-      // For now, we'll store offerings in a subcollection or as part of coachData
-      // Let's use a custom offerings array in coachData
-      if (coach?.customOfferings) {
+      // Load offerings from Firebase - only show what's actually stored
+      if (coach?.customOfferings && Array.isArray(coach.customOfferings)) {
         setOfferings(coach.customOfferings);
       } else {
-        // Migrate from old sessionOffers format
-        const migratedOfferings: SessionOffering[] = [];
-        
-        if (coach?.sessionOffers?.freeIntroEnabled) {
-          migratedOfferings.push({
-            id: "free-intro",
-            name: "Free Intro Consultation",
-            description: "Get to know the coach and discuss your goals",
-            durationMinutes: coach.sessionOffers.freeIntroMinutes || 15,
-            priceCents: 0,
-            currency: "USD",
-            isFree: true,
-            isActive: true,
-            color: "#10B981",
-          });
-        }
-        
-        if (coach?.sessionOffers?.paid) {
-          coach.sessionOffers.paid.forEach((offer: any) => {
-            migratedOfferings.push({
-              id: `paid-${offer.minutes}`,
-              name: `${offer.minutes} Minute Session`,
-              description: `${offer.minutes} minute coaching session`,
-              durationMinutes: offer.minutes,
-              priceCents: offer.priceCents,
-              currency: offer.currency || "USD",
-              isFree: false,
-              isActive: true,
-              color: "#3B82F6",
-            });
-          });
-        }
-        
-        setOfferings(migratedOfferings);
+        // No offerings yet - start with empty array
+        setOfferings([]);
       }
     } catch (error) {
       console.error("Error loading offerings:", error);
