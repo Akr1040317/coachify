@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:check": "next build && echo '✓ Build successful - no errors found'",
     "start": "next start",
     "lint": "next lint"
   },
@@ -34,3 +35,4 @@
     "typescript": "^5.4.0"
   }
 }
+

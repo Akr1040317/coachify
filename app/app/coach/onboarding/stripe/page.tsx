@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
@@ -10,7 +10,7 @@ import { StripeOnboardingSteps } from "@/components/coach/StripeOnboardingSteps"
 
 type ViewState = "education" | "loading" | "success" | "incomplete" | "pending" | "error";
 
-export default function StripeOnboardingPage() {
+function StripeOnboardingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
@@ -328,4 +328,15 @@ export default function StripeOnboardingPage() {
   );
 }
 
+export default function StripeOnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    }>
+      <StripeOnboardingContent />
+    </Suspense>
+  );
+}
 
