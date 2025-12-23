@@ -11,6 +11,22 @@ import { getPendingPayoutAmount } from "@/lib/firebase/payouts";
 import type { PayoutData } from "@/lib/firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
+import { motion, AnimatePresence } from "framer-motion";
+
+interface VerificationResult {
+  summary: {
+    isVerified: boolean;
+    totalMatched: number;
+    totalDiscrepancies: number;
+  };
+  details: {
+    matched: any[];
+    missingInFirestore: any[];
+    missingInStripe: any[];
+    discrepancies: any[];
+  };
+  verifiedAt: string;
+}
 
 export default function CoachRevenuePage() {
   const [user, setUser] = useState<User | null>(null);
@@ -19,6 +35,10 @@ export default function CoachRevenuePage() {
   const [payouts, setPayouts] = useState<any[]>([]);
   const [pendingEarnings, setPendingEarnings] = useState<number>(0);
   const [period, setPeriod] = useState<"all" | "month" | "week">("month");
+  const [verifying, setVerifying] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationChecked, setVerificationChecked] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -106,13 +126,17 @@ export default function CoachRevenuePage() {
 
       if (data.success) {
         setVerificationResult(data);
-        setShowVerificationModal(true);
+        // Only show modal automatically if there are discrepancies
+        if (!data.summary.isVerified) {
+          setShowVerificationModal(true);
+        }
       } else {
-        alert(`Verification failed: ${data.error || "Unknown error"}`);
+        // Silently fail - don't show alert for automatic verification
+        console.error("Verification failed:", data.error);
       }
     } catch (error) {
       console.error("Error verifying with Stripe:", error);
-      alert("Failed to verify with Stripe. Please try again.");
+      // Silently fail - don't show alert for automatic verification
     } finally {
       setVerifying(false);
     }
