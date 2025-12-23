@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { getCourse, getVideos, getArticles, type CourseData, type VideoData, type ArticleData } from "@/lib/firebase/firestore";
 import { User } from "firebase/auth";
-import { where, in as firestoreIn } from "firebase/firestore";
+import { where } from "firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import Image from "next/image";
@@ -318,4 +318,5 @@ export default function CourseViewPage() {
     </DashboardLayout>
   );
 }
+
 
