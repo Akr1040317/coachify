@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { StripeOnboardingSteps } from "@/components/coach/StripeOnboardingSteps";
@@ -31,13 +32,11 @@ function StripeOnboardingContent() {
       if (user) {
         setUser(user);
         await checkAccountStatus(user.uid);
-      } else {
-        router.push("/auth");
       }
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     // Check if returning from Stripe
@@ -138,7 +137,7 @@ function StripeOnboardingContent() {
 
   if (loading && viewState === "education") {
     return (
-      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <div className="text-gray-400">Loading...</div>
       </div>
     );
@@ -147,7 +146,7 @@ function StripeOnboardingContent() {
   // Success State
   if (viewState === "success") {
     return (
-      <div className="min-h-screen bg-[var(--background)] p-6 lg:p-8">
+      <div className="p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
           <GradientCard className="p-8 lg:p-12 border-green-500/30">
             <div className="text-center space-y-6">
@@ -183,7 +182,7 @@ function StripeOnboardingContent() {
   // Pending Review State
   if (viewState === "pending") {
     return (
-      <div className="min-h-screen bg-[var(--background)] p-6 lg:p-8">
+      <div className="p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
           <GradientCard className="p-8 lg:p-12 border-yellow-500/30">
             <div className="text-center space-y-6">
@@ -224,7 +223,7 @@ function StripeOnboardingContent() {
   // Incomplete State
   if (viewState === "incomplete") {
     return (
-      <div className="min-h-screen bg-[var(--background)] p-6 lg:p-8">
+      <div className="p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
           <GradientCard className="p-8 lg:p-12 border-orange-500/30">
             <div className="text-center space-y-6">
@@ -280,7 +279,7 @@ function StripeOnboardingContent() {
   // Error State
   if (viewState === "error") {
     return (
-      <div className="min-h-screen bg-[var(--background)] p-6 lg:p-8">
+      <div className="p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
           <GradientCard className="p-8 lg:p-12 border-red-500/30">
             <div className="text-center space-y-6">
@@ -312,7 +311,7 @@ function StripeOnboardingContent() {
 
   // Education/Onboarding Steps
   return (
-    <div className="min-h-screen bg-[var(--background)] p-6 lg:p-8">
+    <div className="p-6 lg:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
@@ -330,13 +329,15 @@ function StripeOnboardingContent() {
 
 export default function StripeOnboardingPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
-        <div className="text-gray-400">Loading...</div>
-      </div>
-    }>
-      <StripeOnboardingContent />
-    </Suspense>
+    <DashboardLayout role="coach">
+      <Suspense fallback={
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-400">Loading...</div>
+        </div>
+      }>
+        <StripeOnboardingContent />
+      </Suspense>
+    </DashboardLayout>
   );
 }
 
