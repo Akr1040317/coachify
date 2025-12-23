@@ -45,7 +45,7 @@ export function FeaturedCourses() {
           return { 
             ...course, 
             coachName: coach?.displayName || "Unknown Coach",
-            coachAvatar: coach?.avatarUrl || coach?.photoURL
+            coachAvatar: coach?.avatarUrl
           };
         })
       );
@@ -250,4 +250,5 @@ export function FeaturedCourses() {
     </section>
   );
 }
+
 
