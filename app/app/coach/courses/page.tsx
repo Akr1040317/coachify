@@ -8,6 +8,8 @@ import { User } from "firebase/auth";
 import { where, orderBy } from "firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
+import { PaymentSetupModal } from "@/components/coach/PaymentSetupModal";
+import { checkStripeConnectStatus } from "@/lib/firebase/stripe-helpers";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -17,18 +19,42 @@ export default function CoachCoursesPage() {
   const [user, setUser] = useState<User | null>(null);
   const [courses, setCourses] = useState<(CourseData & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [checkingStripe, setCheckingStripe] = useState(true);
+  const [stripeStatus, setStripeStatus] = useState<any>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
       if (user) {
         setUser(user);
-        await loadCourses(user.uid);
+        await Promise.all([
+          loadCourses(user.uid),
+          loadStripeStatus(user.uid)
+        ]);
       }
     });
 
     return () => unsubscribe();
   }, []);
+
+  const loadStripeStatus = async (coachId: string) => {
+    try {
+      const status = await checkStripeConnectStatus(coachId);
+      setStripeStatus(status);
+    } catch (error) {
+      console.error("Error loading Stripe status:", error);
+      // Set default status on error so page can still render
+      setStripeStatus({
+        hasAccount: false,
+        status: "not_setup",
+        chargesEnabled: false,
+        payoutsEnabled: false,
+      });
+    } finally {
+      setCheckingStripe(false);
+    }
+  };
 
   const loadCourses = async (coachId: string) => {
     setLoading(true);
@@ -70,17 +96,47 @@ export default function CoachCoursesPage() {
     router.push(`/app/coach/courses/${courseId}/edit`);
   };
 
+  const handleCreateCourse = () => {
+    const canCreate = stripeStatus?.status === "active" && stripeStatus?.chargesEnabled && stripeStatus?.payoutsEnabled;
+    
+    if (!canCreate) {
+      setShowPaymentModal(true);
+      return;
+    }
+    
+    router.push("/app/coach/course/new");
+  };
+
   const calculateTotalTime = (course: CourseData & { id: string }) => {
     // This will be calculated from videos when we load them
     return course.estimatedMinutes || 0;
   };
 
+  if (loading || checkingStripe) {
+    return (
+      <DashboardLayout role="coach">
+        <div className="min-h-[calc(100vh-64px)] p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center py-12 text-gray-400">Loading...</div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const canCreateCourse = stripeStatus?.status === "active" && stripeStatus?.chargesEnabled && stripeStatus?.payoutsEnabled;
+
   return (
     <DashboardLayout role="coach">
+      <PaymentSetupModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        stripeStatus={stripeStatus}
+      />
       <div className="min-h-[calc(100vh-64px)] p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
             <div>
               <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
                 My Courses
@@ -89,9 +145,20 @@ export default function CoachCoursesPage() {
                 Create and manage your courses with videos and lessons
               </p>
             </div>
-            <GlowButton variant="primary" onClick={() => router.push("/app/coach/course/new")}>
-              + Create Course
-            </GlowButton>
+            <div className="flex flex-col items-end gap-2">
+              <GlowButton 
+                variant="primary" 
+                onClick={handleCreateCourse}
+                disabled={!canCreateCourse}
+              >
+                + Create Course
+              </GlowButton>
+              {!canCreateCourse && (
+                <p className="text-xs text-orange-400 text-center">
+                  Complete payment setup to create courses
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Courses Grid */}
@@ -106,9 +173,18 @@ export default function CoachCoursesPage() {
               </div>
               <h3 className="text-2xl font-bold mb-2">No courses yet</h3>
               <p className="text-gray-400 mb-6">Create your first course to start teaching students</p>
-              <GlowButton variant="primary" onClick={() => router.push("/app/coach/course/new")}>
+              <GlowButton 
+                variant="primary" 
+                onClick={handleCreateCourse}
+                disabled={!canCreateCourse}
+              >
                 Create Your First Course
               </GlowButton>
+              {!canCreateCourse && (
+                <p className="text-xs text-orange-400 mt-2">
+                  Complete payment setup to create courses
+                </p>
+              )}
             </GradientCard>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

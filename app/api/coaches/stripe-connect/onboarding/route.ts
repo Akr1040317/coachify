@@ -2,12 +2,33 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getCoachData } from "@/lib/firebase/firestore";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2023-10-16",
-});
+// Initialize Stripe with error handling
+function getStripe(): Stripe | null {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    console.error("STRIPE_SECRET_KEY is not set in environment variables");
+    return null;
+  }
+  try {
+    return new Stripe(secretKey, {
+      apiVersion: "2023-10-16",
+    });
+  } catch (error) {
+    console.error("Failed to initialize Stripe:", error);
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const stripe = getStripe();
+    if (!stripe) {
+      return NextResponse.json({ 
+        error: "Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.",
+        code: "STRIPE_NOT_CONFIGURED"
+      }, { status: 500 });
+    }
+
     const { coachId } = await request.json();
 
     if (!coachId) {
@@ -62,6 +83,19 @@ export async function POST(request: NextRequest) {
 // GET endpoint to check account status
 export async function GET(request: NextRequest) {
   try {
+    const stripe = getStripe();
+    if (!stripe) {
+      return NextResponse.json({ 
+        hasAccount: false,
+        status: "not_setup",
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
+        error: "Stripe is not configured",
+        code: "STRIPE_NOT_CONFIGURED"
+      });
+    }
+
     const { searchParams } = new URL(request.url);
     const coachId = searchParams.get("coachId");
 
@@ -70,15 +104,44 @@ export async function GET(request: NextRequest) {
     }
 
     const coach = await getCoachData(coachId);
-    if (!coach || !coach.stripeConnectAccountId) {
+    if (!coach) {
       return NextResponse.json({ 
         hasAccount: false,
-        status: "not_setup" 
+        status: "not_setup",
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
+      });
+    }
+    
+    if (!coach.stripeConnectAccountId) {
+      return NextResponse.json({ 
+        hasAccount: false,
+        status: "not_setup",
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
       });
     }
 
     // Retrieve account details from Stripe
-    const account = await stripe.accounts.retrieve(coach.stripeConnectAccountId);
+    let account;
+    try {
+      account = await stripe.accounts.retrieve(coach.stripeConnectAccountId);
+    } catch (stripeError: any) {
+      // If account doesn't exist in Stripe, return not_setup
+      if (stripeError.type === "StripeInvalidRequestError" && stripeError.code === "resource_missing") {
+        return NextResponse.json({ 
+          hasAccount: false,
+          status: "not_setup",
+          chargesEnabled: false,
+          payoutsEnabled: false,
+          detailsSubmitted: false,
+        });
+      }
+      // Re-throw other Stripe errors
+      throw stripeError;
+    }
 
     // Determine status
     let status: string;

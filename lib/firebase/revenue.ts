@@ -1,10 +1,8 @@
 import { 
   getPurchases, 
   getPayouts,
-  where,
-  orderBy,
-  Timestamp
 } from "./firestore";
+import { where, Timestamp } from "firebase/firestore";
 
 export interface RevenueSummary {
   totalRevenue: number;

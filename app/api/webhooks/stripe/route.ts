@@ -8,9 +8,9 @@ import {
   getBooking,
   updateCoachData,
   getPurchases,
-  where
+  type DisputeData
 } from "@/lib/firebase/firestore";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, where } from "firebase/firestore";
 import { addToPendingPayout, updatePayoutStatus } from "@/lib/firebase/payouts";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle transfer.paid
-    if (event.type === "transfer.paid") {
+    if (event.type === "transfer.paid" || (event.type as string) === "transfer.paid") {
       const transfer = event.data.object as Stripe.Transfer;
       const payoutId = transfer.metadata?.payoutId;
       
@@ -154,13 +154,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle transfer.failed
-    if (event.type === "transfer.failed") {
+    if ((event.type as string) === "transfer.failed") {
       const transfer = event.data.object as Stripe.Transfer;
       const payoutId = transfer.metadata?.payoutId;
       const coachId = transfer.metadata?.coachId;
       
       if (payoutId) {
-        await updatePayoutStatus(payoutId, "failed", transfer.failure_message || "Transfer failed");
+        await updatePayoutStatus(payoutId, "failed", (transfer as any).failure_message || "Transfer failed");
         
         // Add funds back to pending payout
         if (coachId && transfer.amount > 0) {
@@ -230,6 +230,109 @@ export async function POST(request: NextRequest) {
             status: refundAmount === purchase.amountCents ? "refunded" : "paid",
           });
         }
+      }
+    }
+
+    // Handle charge.dispute.created (chargeback initiated)
+    if (event.type === "charge.dispute.created") {
+      const dispute = event.data.object as Stripe.Dispute;
+      const chargeId = dispute.charge as string;
+      
+      // Find purchase record by charge ID
+      const charge = await stripe.charges.retrieve(chargeId);
+      const paymentIntentId = charge.payment_intent as string;
+      
+      if (paymentIntentId) {
+        const purchases = await getPurchases([
+          where("stripePaymentIntentId", "==", paymentIntentId)
+        ]);
+        
+        if (purchases.length > 0) {
+          const purchase = purchases[0];
+          const { createDispute } = await import("@/lib/firebase/firestore");
+          
+          // Map Stripe dispute status to our status
+          let status: DisputeData["status"] = "needs_response";
+          if (dispute.status === "warning_needs_response") status = "warning_needs_response";
+          else if (dispute.status === "warning_under_review") status = "warning_under_review";
+          else if (dispute.status === "warning_closed") status = "warning_closed";
+          else if (dispute.status === "needs_response") status = "needs_response";
+          else if (dispute.status === "under_review") status = "under_review";
+          else if (dispute.status === "charge_refunded") status = "charge_refunded";
+          else if (dispute.status === "won") status = "won";
+          else if (dispute.status === "lost") status = "lost";
+          
+          await createDispute({
+            purchaseId: purchase.id,
+            userId: purchase.userId,
+            coachId: purchase.coachId,
+            stripeDisputeId: dispute.id,
+            stripeChargeId: chargeId,
+            amountCents: dispute.amount,
+            currency: dispute.currency,
+            reason: dispute.reason || "unknown",
+            status,
+            evidenceDueBy: dispute.evidence_details?.due_by 
+              ? Timestamp.fromDate(new Date(dispute.evidence_details.due_by * 1000))
+              : undefined,
+          });
+          
+          // Alert: Chargeback created - you're responsible for this
+          console.warn(`[CHARGEBACK ALERT] Dispute ${dispute.id} created for purchase ${purchase.id}. Amount: ${dispute.amount / 100} ${dispute.currency.toUpperCase()}`);
+        }
+      }
+    }
+
+    // Handle charge.dispute.updated (chargeback status changed)
+    if (event.type === "charge.dispute.updated") {
+      const dispute = event.data.object as Stripe.Dispute;
+      const { getDisputeByStripeId, updateDispute } = await import("@/lib/firebase/firestore");
+      
+      const existingDispute = await getDisputeByStripeId(dispute.id);
+      
+      if (existingDispute) {
+        // Map Stripe dispute status to our status
+        let status: DisputeData["status"] = "needs_response";
+        const disputeStatus = dispute.status as string;
+        if (disputeStatus === "warning_needs_response") status = "warning_needs_response";
+        else if (disputeStatus === "warning_under_review") status = "warning_under_review";
+        else if (disputeStatus === "warning_closed") status = "warning_closed";
+        else if (disputeStatus === "needs_response") status = "needs_response";
+        else if (disputeStatus === "under_review") status = "under_review";
+        else if (disputeStatus === "charge_refunded") status = "charge_refunded";
+        else if (disputeStatus === "won") status = "won";
+        else if (disputeStatus === "lost") status = "lost";
+        
+        const updateData: Partial<DisputeData> = {
+          status,
+          evidenceDueBy: dispute.evidence_details?.due_by 
+            ? Timestamp.fromDate(new Date(dispute.evidence_details.due_by * 1000))
+            : undefined,
+        };
+        
+        // If resolved, set resolvedAt
+        const resolvedStatuses: DisputeData["status"][] = ["won", "lost", "charge_refunded", "warning_closed"];
+        if (resolvedStatuses.includes(status)) {
+          updateData.resolvedAt = Timestamp.now();
+          
+          // If lost or charge_refunded, reverse coach earnings
+          if (status === "lost" || status === "charge_refunded") {
+            const { getPurchase, getPendingPayout, updatePendingPayout } = await import("@/lib/firebase/firestore");
+            const purchase = await getPurchase(existingDispute.purchaseId);
+            
+            if (purchase && purchase.coachId) {
+              const pending = await getPendingPayout(purchase.coachId);
+              if (pending && pending.amountCents >= purchase.coachEarningsCents) {
+                await updatePendingPayout(purchase.coachId, {
+                  amountCents: pending.amountCents - purchase.coachEarningsCents,
+                  transactionIds: pending.transactionIds.filter(id => id !== purchase.id),
+                });
+              }
+            }
+          }
+        }
+        
+        await updateDispute(existingDispute.id, updateData);
       }
     }
 

@@ -94,6 +94,9 @@ export interface CoachData {
   stripeConnectStatus?: "pending" | "active" | "restricted";
   lastPayoutDate?: Timestamp;
   nextPayoutDate?: Timestamp;
+  complianceStatus?: "pending" | "approved" | "flagged" | "rejected";
+  complianceCheckDate?: Timestamp;
+  complianceNotes?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -493,6 +496,72 @@ export interface PendingPayoutData {
   lastUpdated: Timestamp;
 }
 
+// Dispute/Chargeback types and operations
+export interface DisputeData {
+  id?: string;
+  purchaseId: string;
+  userId: string;
+  coachId: string;
+  stripeDisputeId: string;
+  stripeChargeId: string;
+  amountCents: number;
+  currency: string;
+  reason: string; // e.g., "fraudulent", "product_unacceptable", "subscription_canceled"
+  status: "warning_needs_response" | "warning_under_review" | "warning_closed" | "needs_response" | "under_review" | "charge_refunded" | "won" | "lost";
+  evidenceDueBy?: Timestamp;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  resolvedAt?: Timestamp;
+  adminNotes?: string;
+}
+
+export const createDispute = async (data: Partial<DisputeData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = await addDoc(collection(db, "disputes"), {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return docRef.id;
+};
+
+export const getDisputes = async (constraints: QueryConstraint[] = []): Promise<(DisputeData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const q = query(collection(db, "disputes"), ...constraints);
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DisputeData & { id: string }));
+};
+
+export const updateDispute = async (disputeId: string, data: Partial<DisputeData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = doc(db, "disputes", disputeId);
+  await updateDoc(docRef, {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+};
+
+export const getDispute = async (disputeId: string): Promise<(DisputeData & { id: string }) | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = doc(db, "disputes", disputeId);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() } as DisputeData & { id: string };
+  }
+  return null;
+};
+
+export const getDisputeByStripeId = async (stripeDisputeId: string): Promise<(DisputeData & { id: string }) | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const q = query(collection(db, "disputes"), where("stripeDisputeId", "==", stripeDisputeId));
+  const querySnapshot = await getDocs(q);
+  if (!querySnapshot.empty) {
+    const doc = querySnapshot.docs[0];
+    return { id: doc.id, ...doc.data() } as DisputeData & { id: string };
+  }
+  return null;
+};
+
 export const createPurchase = async (data: Partial<PurchaseData>): Promise<string> => {
   if (!db) throw new Error("Firestore is not initialized");
   const docRef = await addDoc(collection(db, "purchases"), {
@@ -624,5 +693,78 @@ export const getReviews = async (constraints: QueryConstraint[] = []): Promise<(
   const q = query(collection(db, "reviews"), ...constraints);
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ReviewData & { id: string }));
+};
+
+// Payout operations
+export const createPayout = async (data: Partial<PayoutData>): Promise<string> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = await addDoc(collection(db, "payouts"), {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+};
+
+export const getPayouts = async (constraints: QueryConstraint[] = []): Promise<(PayoutData & { id: string })[]> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const q = query(collection(db, "payouts"), ...constraints);
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PayoutData & { id: string }));
+};
+
+export const updatePayout = async (payoutId: string, data: Partial<PayoutData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = doc(db, "payouts", payoutId);
+  await updateDoc(docRef, data);
+};
+
+export const getPayout = async (payoutId: string): Promise<(PayoutData & { id: string }) | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = doc(db, "payouts", payoutId);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() } as PayoutData & { id: string };
+  }
+  return null;
+};
+
+// Pending payout operations
+export const getPendingPayout = async (coachId: string): Promise<(PendingPayoutData & { id: string }) | null> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = doc(db, "coach_pending_payouts", coachId);
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    return { id: docSnap.id, ...docSnap.data() } as PendingPayoutData & { id: string };
+  }
+  return null;
+};
+
+export const updatePendingPayout = async (coachId: string, data: Partial<PendingPayoutData>): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = doc(db, "coach_pending_payouts", coachId);
+  const updateData: any = {
+    ...data,
+    lastUpdated: serverTimestamp(),
+  };
+  // Check if document exists, if not create it
+  const docSnap = await getDoc(docRef);
+  if (docSnap.exists()) {
+    await updateDoc(docRef, updateData);
+  } else {
+    await setDoc(docRef, {
+      coachId,
+      ...updateData,
+    });
+  }
+};
+
+export const clearPendingPayout = async (coachId: string): Promise<void> => {
+  if (!db) throw new Error("Firestore is not initialized");
+  const docRef = doc(db, "coach_pending_payouts", coachId);
+  await updateDoc(docRef, {
+    amountCents: 0,
+    transactionIds: [],
+    lastUpdated: serverTimestamp(),
+  });
 };
 

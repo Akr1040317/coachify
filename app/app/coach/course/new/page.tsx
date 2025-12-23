@@ -21,6 +21,7 @@ export default function NewCoursePage() {
   const [saving, setSaving] = useState(false);
   const [stripeStatus, setStripeStatus] = useState<any>(null);
   const [checkingStripe, setCheckingStripe] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",

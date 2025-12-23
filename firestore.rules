@@ -114,6 +114,8 @@ service cloud.firestore {
     match /purchases/{purchaseId} {
       // Users can read their own purchases
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      // Coaches can read purchases for their courses/sessions
+      allow read: if isAuthenticated() && resource.data.coachId == request.auth.uid;
       // System can create purchases (via webhook)
       allow create: if isAuthenticated();
     }
@@ -146,6 +148,39 @@ service cloud.firestore {
       allow create: if isAuthenticated() && getUserRole() == "student";
       // Review author can update their own reviews
       allow update: if isAuthenticated() && resource.data.studentId == request.auth.uid;
+    }
+    
+    // Payouts collection
+    match /payouts/{payoutId} {
+      // Coaches can read their own payouts
+      allow read: if isAuthenticated() && resource.data.coachId == request.auth.uid;
+      // Admins can read all payouts
+      allow read: if isAuthenticated() && getUserRole() == "admin";
+      // System can create payouts (via cron job)
+      allow create: if isAuthenticated();
+      // System can update payouts
+      allow update: if isAuthenticated();
+    }
+    
+    // Coach pending payouts collection
+    match /coach_pending_payouts/{coachId} {
+      // Coaches can read their own pending payout
+      allow read: if isAuthenticated() && isOwner(coachId);
+      // System can create/update pending payouts (via webhook/cron)
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+    }
+    
+    // Disputes collection
+    match /disputes/{disputeId} {
+      // Admins can read all disputes
+      allow read: if isAuthenticated() && getUserRole() == "admin";
+      // Coaches can read disputes related to their purchases
+      allow read: if isAuthenticated() && getUserRole() == "coach";
+      // System can create disputes (via webhook)
+      allow create: if isAuthenticated();
+      // Admins can update disputes (add notes, etc.)
+      allow update: if isAuthenticated() && getUserRole() == "admin";
     }
   }
 }

@@ -99,9 +99,27 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
       if (response.ok) {
         const data = await response.json();
         setStripeStatus(data);
+      } else {
+        // If API returns error, set status to indicate no account
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData.code === "ACCOUNT_NOT_FOUND" || response.status === 404) {
+          setStripeStatus({
+            hasAccount: false,
+            status: "not_setup",
+            chargesEnabled: false,
+            payoutsEnabled: false,
+          });
+        }
       }
     } catch (error) {
       console.error("Error loading Stripe status:", error);
+      // Set default status on error so banner can still show
+      setStripeStatus({
+        hasAccount: false,
+        status: "not_setup",
+        chargesEnabled: false,
+        payoutsEnabled: false,
+      });
     }
   };
 
@@ -515,11 +533,47 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
     }
   };
 
-  const renderDashboard = () => (
-    <div className="min-h-[calc(100vh-64px)] p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header with Verification Status on Left */}
-        <div className="mb-8">
+  const renderDashboard = () => {
+    // Check if payment setup is complete
+    // Show banner if: no stripeStatus (not checked yet), or status is not active, or charges/payouts not enabled
+    const isPaymentSetupComplete = stripeStatus?.status === "active" && stripeStatus?.chargesEnabled && stripeStatus?.payoutsEnabled;
+    const shouldShowBanner = !stripeStatus || !isPaymentSetupComplete;
+
+    return (
+      <div className="min-h-[calc(100vh-64px)] p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Persistent Payment Setup Banner */}
+          {shouldShowBanner && (
+            <div className="mb-6">
+              <GradientCard className="p-4 border-orange-500/30 bg-orange-500/5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-orange-400 mb-1">Complete Payment Setup</h3>
+                      <p className="text-gray-400 text-sm">
+                        Connect your bank account to start earning from your courses and sessions. This is required to create content.
+                      </p>
+                    </div>
+                  </div>
+                  <GlowButton 
+                    variant="primary" 
+                    size="sm"
+                    onClick={handleStripeSetup}
+                  >
+                    Set Up Payments →
+                  </GlowButton>
+                </div>
+              </GradientCard>
+            </div>
+          )}
+
+          {/* Header with Verification Status on Left */}
+          <div className="mb-8">
           <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between mb-4">
             <div className="flex-1">
               <h1 className="text-4xl md:text-5xl font-bold mb-3 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
@@ -565,8 +619,8 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
           </div>
         </div>
 
-        {/* Stripe Connect Payment Status */}
-        {stripeStatus && (
+        {/* Stripe Connect Payment Status - Only show if payment is set up (to avoid duplicate with banner above) */}
+        {stripeStatus && stripeStatus.hasAccount && stripeStatus.status !== "not_setup" && (
           <div className="mb-8">
             <PaymentStatusCard
               stripeStatus={stripeStatus}
@@ -732,7 +786,8 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
         )}
       </div>
     </div>
-  );
+    );
+  };
 
   const handleTabChangeFromLayout = (tab: string) => {
     // Update local state immediately for rendering

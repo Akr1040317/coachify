@@ -4,9 +4,11 @@ import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
-import { getCoachRevenue, getPayouts, where } from "@/lib/firebase/revenue";
-import { getPayouts as getPayoutsFromFirestore } from "@/lib/firebase/firestore";
+import { getCoachRevenue } from "@/lib/firebase/revenue";
+import { getPayouts } from "@/lib/firebase/firestore";
+import { where } from "firebase/firestore";
 import { getPendingPayoutAmount } from "@/lib/firebase/payouts";
+import type { PayoutData } from "@/lib/firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 
@@ -54,12 +56,12 @@ export default function CoachRevenuePage() {
 
       const [revenue, payoutsData, pending] = await Promise.all([
         getCoachRevenue(coachId, startDate, now),
-        getPayoutsFromFirestore([where("coachId", "==", coachId)]),
+        getPayouts([where("coachId", "==", coachId)]),
         getPendingPayoutAmount(coachId),
       ]);
 
       setRevenueData(revenue);
-      setPayouts(payoutsData.sort((a, b) => {
+      setPayouts(payoutsData.sort((a: PayoutData & { id: string }, b: PayoutData & { id: string }) => {
         const aTime = a.createdAt?.toMillis() || 0;
         const bTime = b.createdAt?.toMillis() || 0;
         return bTime - aTime;

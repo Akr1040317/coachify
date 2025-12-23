@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
-import { getUserData, getCoaches, updateCoachData } from "@/lib/firebase/firestore";
+import { getUserData, getCoaches, updateCoachData, type CoachData } from "@/lib/firebase/firestore";
+import { checkCoachCompliance, getCategoryDescription } from "@/lib/compliance/restricted-categories";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { BadgeVerified } from "@/components/ui/BadgeVerified";
 import Link from "next/link";
+import { Timestamp } from "firebase/firestore";
 
 export default function AdminCoachesPage() {
   const router = useRouter();
@@ -183,10 +185,15 @@ export default function AdminCoachesPage() {
                         variant="primary"
                         size="sm"
                         glowColor="orange"
-                        onClick={() => handleVerify(coach.userId)}
+                        onClick={() => handleVerify(coach)}
                       >
                         Verify
                       </GlowButton>
+                    )}
+                    {coach.complianceStatus === "flagged" && (
+                      <span className="text-xs px-2 py-1 bg-red-500/20 text-red-400 rounded-full">
+                        Compliance Flagged
+                      </span>
                     )}
                     {coach.status === "active" && (
                       <GlowButton

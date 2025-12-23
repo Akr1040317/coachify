@@ -7,6 +7,7 @@ import { getCoachData, updateCoachData } from "@/lib/firebase/firestore";
 import { User } from "firebase/auth";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
+import { PaymentSetupModal } from "@/components/coach/PaymentSetupModal";
 import { motion, AnimatePresence } from "framer-motion";
 import { PaymentSetupBlock } from "@/components/coach/PaymentSetupBlock";
 import { checkStripeConnectStatus } from "@/lib/firebase/stripe-helpers";
@@ -32,6 +33,7 @@ export default function OfferingsPage() {
   const [checkingStripe, setCheckingStripe] = useState(true);
   const [stripeStatus, setStripeStatus] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [editingOffering, setEditingOffering] = useState<SessionOffering | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "inactive" | "free" | "paid">("all");
 
@@ -235,6 +237,11 @@ export default function OfferingsPage() {
 
   return (
     <DashboardLayout role="coach">
+      <PaymentSetupModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        stripeStatus={stripeStatus}
+      />
       <div className="min-h-[calc(100vh-64px)] p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}

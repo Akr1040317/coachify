@@ -408,11 +408,13 @@ export function DashboardLayout({ children, role, activeTab: externalActiveTab, 
                     onClick={() => {
                       // Handle coach-specific tabs
                       if (role === "coach") {
-                        if (item.key === "messages" || item.key === "my-page" || item.key === "dashboard") {
+                        if (item.key === "messages" || item.key === "dashboard") {
                           setActiveTab(item.key);
                           if (typeof window !== "undefined") {
                             window.history.pushState({}, "", item.href);
                           }
+                        } else if (item.key === "my-page") {
+                          router.push("/app/coach/my-page");
                         } else if (item.key === "offerings") {
                           router.push("/app/coach/offerings");
                         } else {
