@@ -84,6 +84,35 @@ export default function CoachRevenuePage() {
     return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
   };
 
+  const handleVerifyWithStripe = async () => {
+    if (!user) return;
+
+    setVerifying(true);
+    try {
+      const response = await fetch("/api/coaches/stripe-connect/verify-revenue", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ coachId: user.uid }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setVerificationResult(data);
+        setShowVerificationModal(true);
+      } else {
+        alert(`Verification failed: ${data.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error verifying with Stripe:", error);
+      alert("Failed to verify with Stripe. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout role="coach" activeTab="revenue">
@@ -98,12 +127,12 @@ export default function CoachRevenuePage() {
     <DashboardLayout role="coach" activeTab="revenue">
       <div className="min-h-[calc(100vh-64px)] p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
             <h1 className="text-4xl md:text-5xl font-bold mb-4 lg:mb-0 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
               Revenue Dashboard
             </h1>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <GlowButton
                 variant={period === "week" ? "primary" : "outline"}
                 size="sm"
@@ -124,6 +153,15 @@ export default function CoachRevenuePage() {
                 onClick={() => setPeriod("all")}
               >
                 All Time
+              </GlowButton>
+              <GlowButton
+                variant="outline"
+                size="sm"
+                onClick={handleVerifyWithStripe}
+                disabled={verifying}
+                glowColor="blue"
+              >
+                {verifying ? "Verifying..." : "Verify with Stripe"}
               </GlowButton>
             </div>
           </div>
@@ -235,6 +273,190 @@ export default function CoachRevenuePage() {
           </GradientCard>
         </div>
       </div>
+
+      {/* Verification Modal */}
+      <AnimatePresence>
+        {showVerificationModal && verificationResult && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+              onClick={() => setShowVerificationModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="fixed inset-0 flex items-center justify-center z-50 p-4 pointer-events-none"
+            >
+              <div
+                className="pointer-events-auto max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-[var(--card)] rounded-xl border-2 border-gray-700 shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GradientCard className="p-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-3xl font-bold text-white">Stripe Verification Results</h2>
+                    <button
+                      onClick={() => setShowVerificationModal(false)}
+                      className="p-2 text-gray-400 hover:text-white transition-colors"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Summary */}
+                  <div className={`p-4 rounded-lg mb-6 ${
+                    verificationResult.summary.isVerified
+                      ? "bg-green-500/10 border border-green-500/30"
+                      : "bg-yellow-500/10 border border-yellow-500/30"
+                  }`}>
+                    <div className="flex items-center gap-3 mb-2">
+                      {verificationResult.summary.isVerified ? (
+                        <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      )}
+                      <h3 className={`text-xl font-bold ${
+                        verificationResult.summary.isVerified ? "text-green-400" : "text-yellow-400"
+                      }`}>
+                        {verificationResult.summary.isVerified ? "All Data Verified ✓" : "Discrepancies Found ⚠️"}
+                      </h3>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4 mt-4 text-sm">
+                      <div>
+                        <span className="text-gray-400">Matched Transactions: </span>
+                        <span className="font-semibold text-white">{verificationResult.summary.totalMatched}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Total Discrepancies: </span>
+                        <span className="font-semibold text-yellow-400">{verificationResult.summary.totalDiscrepancies}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-400">Verified At: </span>
+                        <span className="font-semibold text-white">
+                          {new Date(verificationResult.verifiedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Discrepancies */}
+                  {verificationResult.summary.totalDiscrepancies > 0 && (
+                    <div className="space-y-4">
+                      {/* Missing in Firestore */}
+                      {verificationResult.details.missingInFirestore.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-red-400 mb-2">
+                            Missing in Firestore ({verificationResult.details.missingInFirestore.length})
+                          </h3>
+                          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 max-h-48 overflow-y-auto">
+                            <p className="text-gray-300 text-sm mb-2">
+                              These Stripe payments exist but are not recorded in Firestore:
+                            </p>
+                            <div className="space-y-2">
+                              {verificationResult.details.missingInFirestore.map((item, idx) => (
+                                <div key={idx} className="text-sm text-gray-300">
+                                  <span className="font-mono text-xs">PI: {item.stripePaymentIntentId.slice(-12)}</span>
+                                  {" - "}
+                                  <span className="font-semibold">{formatCurrency(item.amountCents)}</span>
+                                  {" - "}
+                                  <span className="text-gray-400">{new Date(item.created).toLocaleDateString()}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Missing in Stripe */}
+                      {verificationResult.details.missingInStripe.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-orange-400 mb-2">
+                            Missing in Stripe ({verificationResult.details.missingInStripe.length})
+                          </h3>
+                          <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 max-h-48 overflow-y-auto">
+                            <p className="text-gray-300 text-sm mb-2">
+                              These Firestore purchases don&apos;t have matching Stripe payments:
+                            </p>
+                            <div className="space-y-2">
+                              {verificationResult.details.missingInStripe.map((item, idx) => (
+                                <div key={idx} className="text-sm text-gray-300">
+                                  <span className="font-mono text-xs">Purchase: {item.purchaseId?.slice(-12) || "N/A"}</span>
+                                  {" - "}
+                                  <span className="font-semibold">{formatCurrency(item.amountCents || 0)}</span>
+                                  {" - "}
+                                  <span className="text-gray-400">{item.reason}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Amount Discrepancies */}
+                      {verificationResult.details.discrepancies.length > 0 && (
+                        <div>
+                          <h3 className="text-lg font-semibold text-yellow-400 mb-2">
+                            Amount Mismatches ({verificationResult.details.discrepancies.length})
+                          </h3>
+                          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 max-h-48 overflow-y-auto">
+                            <p className="text-gray-300 text-sm mb-2">
+                              These transactions have different amounts in Firestore vs Stripe:
+                            </p>
+                            <div className="space-y-2">
+                              {verificationResult.details.discrepancies.map((item, idx) => (
+                                <div key={idx} className="text-sm text-gray-300">
+                                  <span className="font-mono text-xs">PI: {item.stripePaymentIntentId.slice(-12)}</span>
+                                  {" - "}
+                                  <span>Firestore: <span className="font-semibold">{formatCurrency(item.firestoreAmount)}</span></span>
+                                  {" vs "}
+                                  <span>Stripe: <span className="font-semibold">{formatCurrency(item.stripeAmount)}</span></span>
+                                  {" ("}
+                                  <span className={item.difference > 0 ? "text-green-400" : "text-red-400"}>
+                                    {item.difference > 0 ? "+" : ""}{formatCurrency(item.difference)}
+                                  </span>
+                                  {")"}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* All Verified */}
+                  {verificationResult.summary.isVerified && (
+                    <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6 text-center">
+                      <p className="text-green-400 font-semibold">
+                        ✓ All transactions match between Firestore and Stripe!
+                      </p>
+                      <p className="text-gray-400 text-sm mt-2">
+                        {verificationResult.summary.totalMatched} transactions verified successfully.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-6 pt-6 border-t border-gray-700">
+                    <p className="text-gray-400 text-xs">
+                      Note: This verification compares Firestore purchase records with Stripe payment intents.
+                      If discrepancies are found, contact support for assistance.
+                    </p>
+                  </div>
+                </GradientCard>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </DashboardLayout>
   );
 }
