@@ -149,7 +149,7 @@ export default function NewCoursePage() {
               <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
                 Create New Course
               </h1>
-              <p className="text-gray-400">Fill in the course details. You'll add videos and articles after creation.</p>
+              <p className="text-gray-400">Fill in the course details. You&apos;ll add videos and articles after creation.</p>
             </div>
             <GlowButton variant="outline" onClick={() => router.push("/app/coach/courses")}>
               Cancel

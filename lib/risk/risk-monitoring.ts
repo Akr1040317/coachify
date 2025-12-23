@@ -5,8 +5,8 @@
  * and transactions to prevent chargebacks, disputes, and compliance issues.
  */
 
-import { CoachData, PurchaseData, DisputeData, getPurchases, getDisputes, where } from "@/lib/firebase/firestore";
-import { Timestamp } from "firebase/firestore";
+import { CoachData, PurchaseData, DisputeData, getPurchases, getDisputes } from "@/lib/firebase/firestore";
+import { Timestamp, where } from "firebase/firestore";
 
 export interface RiskScore {
   coachId: string;

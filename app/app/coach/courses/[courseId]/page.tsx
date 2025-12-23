@@ -170,7 +170,7 @@ export default function CourseViewPage() {
 
             {course.outcomes && course.outcomes.length > 0 && (
               <div>
-                <h3 className="text-xl font-bold mb-3">What You'll Learn</h3>
+                <h3 className="text-xl font-bold mb-3">What You&apos;ll Learn</h3>
                 <ul className="space-y-2">
                   {course.outcomes.map((outcome, idx) => (
                     <li key={idx} className="flex items-start gap-3">

@@ -125,7 +125,7 @@ export function PaymentStatusCard({ stripeStatus, pendingEarnings = 0, onSetupCl
           <div>
             <h3 className="text-lg font-semibold text-red-400 mb-1">Payment Account Issue</h3>
             <p className="text-gray-400 text-sm">
-              There's an issue with your payment account. Please complete the setup.
+              There&apos;s an issue with your payment account. Please complete the setup.
             </p>
           </div>
         </div>

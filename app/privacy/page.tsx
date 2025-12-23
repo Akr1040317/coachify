@@ -72,7 +72,7 @@ export default function PrivacyPage() {
           </GradientCard>
 
           <GradientCard className="p-8">
-            <h2 className="text-2xl font-bold mb-4">5. Children's Privacy</h2>
+            <h2 className="text-2xl font-bold mb-4">5. Children&apos;s Privacy</h2>
             <p className="text-gray-300 mb-4">
               Our service is designed for users 13 and older. For users under 18:
             </p>
@@ -124,8 +124,8 @@ export default function PrivacyPage() {
               We use third-party services that may collect information:
             </p>
             <ul className="list-disc list-inside space-y-2 text-gray-300 ml-4">
-              <li><strong>Stripe:</strong> Payment processing (see Stripe's privacy policy)</li>
-              <li><strong>Firebase:</strong> Authentication and data storage (see Google's privacy policy)</li>
+              <li><strong>Stripe:</strong> Payment processing (see Stripe&apos;s privacy policy)</li>
+              <li><strong>Firebase:</strong> Authentication and data storage (see Google&apos;s privacy policy)</li>
               <li><strong>Vercel:</strong> Hosting and analytics</li>
             </ul>
           </GradientCard>

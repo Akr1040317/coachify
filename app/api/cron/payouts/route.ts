@@ -5,10 +5,9 @@ import {
   processCoachPayout,
   getPendingPayoutAmount
 } from "@/lib/firebase/payouts";
-import { getCoachData, updateCoachData } from "@/lib/firebase/firestore";
-import { getPurchases, where } from "@/lib/firebase/firestore";
+import { getCoachData, updateCoachData, getPurchases } from "@/lib/firebase/firestore";
 import { PAYOUT_MINIMUM_CENTS } from "@/lib/config/payments";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, where } from "firebase/firestore";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2023-10-16",

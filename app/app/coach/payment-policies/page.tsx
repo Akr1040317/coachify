@@ -155,7 +155,7 @@ export default function PaymentPoliciesPage() {
           <h2 className="text-2xl font-bold mb-4">Need Help?</h2>
           <p className="text-gray-300 mb-4">
             If you have questions about refunds, chargebacks, or risk management, please contact our support team.
-            We're here to help you succeed on the platform.
+            We&apos;re here to help you succeed on the platform.
           </p>
           <a
             href="mailto:support@coachify.com"

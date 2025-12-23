@@ -160,7 +160,7 @@ export default function StripeOnboardingPage() {
               </div>
               <h2 className="text-3xl font-bold text-white mb-2">Payment Account Connected!</h2>
               <p className="text-gray-400 text-lg mb-8">
-                Your Stripe account is set up and ready. You'll receive weekly payouts every Monday for your earnings.
+                Your Stripe account is set up and ready. You&apos;ll receive weekly payouts every Monday for your earnings.
               </p>
               <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-6 mb-6">
                 <h3 className="font-semibold text-white mb-2">What's Next?</h3>
@@ -202,8 +202,8 @@ export default function StripeOnboardingPage() {
                 <h3 className="font-semibold text-white mb-2">What happens next?</h3>
                 <ul className="text-left space-y-2 text-gray-300 text-sm">
                   <li>• Stripe will verify your information</li>
-                  <li>• You'll receive an email when verification is complete</li>
-                  <li>• You can still use the platform, but won't receive payouts until verified</li>
+                  <li>• You&apos;ll receive an email when verification is complete</li>
+                  <li>• You can still use the platform, but won&apos;t receive payouts until verified</li>
                 </ul>
               </div>
               <div className="flex gap-3 justify-center">

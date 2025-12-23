@@ -16,7 +16,7 @@ export default function TrustAndSafetyPage() {
           <GradientCard className="p-8">
             <h2 className="text-2xl font-bold mb-4">Our Commitment</h2>
             <p className="text-gray-300 mb-4">
-              At Coachify, we're committed to creating a safe, trustworthy platform for students and coaches.
+              At Coachify, we&apos;re committed to creating a safe, trustworthy platform for students and coaches.
               We take the safety and security of our community seriously.
             </p>
           </GradientCard>
