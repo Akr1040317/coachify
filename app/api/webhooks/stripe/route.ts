@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle transfer.paid
-    if (event.type === "transfer.paid" || (event.type as string) === "transfer.paid") {
+    if ((event.type as string) === "transfer.paid") {
       const transfer = event.data.object as Stripe.Transfer;
       const payoutId = transfer.metadata?.payoutId;
       
@@ -253,14 +253,15 @@ export async function POST(request: NextRequest) {
           
           // Map Stripe dispute status to our status
           let status: DisputeData["status"] = "needs_response";
-          if (dispute.status === "warning_needs_response") status = "warning_needs_response";
-          else if (dispute.status === "warning_under_review") status = "warning_under_review";
-          else if (dispute.status === "warning_closed") status = "warning_closed";
-          else if (dispute.status === "needs_response") status = "needs_response";
-          else if (dispute.status === "under_review") status = "under_review";
-          else if (dispute.status === "charge_refunded") status = "charge_refunded";
-          else if (dispute.status === "won") status = "won";
-          else if (dispute.status === "lost") status = "lost";
+          const disputeStatus = dispute.status as string;
+          if (disputeStatus === "warning_needs_response") status = "warning_needs_response";
+          else if (disputeStatus === "warning_under_review") status = "warning_under_review";
+          else if (disputeStatus === "warning_closed") status = "warning_closed";
+          else if (disputeStatus === "needs_response") status = "needs_response";
+          else if (disputeStatus === "under_review") status = "under_review";
+          else if (disputeStatus === "charge_refunded") status = "charge_refunded";
+          else if (disputeStatus === "won") status = "won";
+          else if (disputeStatus === "lost") status = "lost";
           
           await createDispute({
             purchaseId: purchase.id,
@@ -343,4 +344,5 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ received: true });
 }
+
 
