@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Coach ID is required" }, { status: 400 });
     }
 
-    const coach = await getCoachData(coachId);
+    const coach = await getCoachDataAdmin(coachId);
     if (!coach) {
       return NextResponse.json({ 
         hasAccount: false,
