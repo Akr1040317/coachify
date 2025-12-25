@@ -197,7 +197,7 @@ export default function CoachRevenuePage() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShowVerificationModal(true)}
-                  glowColor="yellow"
+                  glowColor="orange"
                 >
                   ⚠️ {verificationResult.summary.totalDiscrepancies} Issue{verificationResult.summary.totalDiscrepancies !== 1 ? "s" : ""} Found
                 </GlowButton>
