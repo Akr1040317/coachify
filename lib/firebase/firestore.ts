@@ -31,6 +31,7 @@ export interface UserData {
   guardianName?: string;
   guardianEmail?: string;
   onboardingCompleted: boolean;
+  referredByCoachId?: string; // Coach ID who referred this student
 }
 
 export interface StudentData {

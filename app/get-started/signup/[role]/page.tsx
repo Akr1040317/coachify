@@ -192,6 +192,18 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [referralCoachId, setReferralCoachId] = useState<string | null>(null);
+
+  // Get referral from URL query params
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get("ref");
+      if (ref) {
+        setReferralCoachId(ref);
+      }
+    }
+  }, []);
 
   // Validate role
   useEffect(() => {
@@ -211,13 +223,20 @@ export default function SignupPage() {
             // Create user document with role
             // Name will be collected during onboarding
             const displayName = user.displayName || user.email?.split("@")[0] || "User";
-            await createUserData(user.uid, {
+            const userDataToCreate: any = {
               email: user.email || email,
               displayName: displayName,
               photoURL: user.photoURL || undefined,
               role: role,
               onboardingCompleted: false,
-            });
+            };
+            
+            // Add referral coach ID if present (for students only)
+            if (role === "student" && referralCoachId) {
+              userDataToCreate.referredByCoachId = referralCoachId;
+            }
+            
+            await createUserData(user.uid, userDataToCreate);
           } else {
             // User document exists - check if they've completed onboarding
             if (userData.onboardingCompleted) {
@@ -427,4 +446,5 @@ export default function SignupPage() {
     </div>
   );
 }
+
 
