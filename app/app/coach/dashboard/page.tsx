@@ -739,8 +739,8 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
           </div>
         </div>
 
-        {/* Stripe Connect Payment Status - Only show if payment is set up (to avoid duplicate with banner above) */}
-        {stripeStatus && stripeStatus.hasAccount && stripeStatus.status !== "not_setup" && (
+        {/* Stripe Connect Payment Status - Only show if payment is fully set up (active) to avoid duplicate with banner above */}
+        {stripeStatus && stripeStatus.hasAccount && stripeStatus.status === "active" && stripeStatus.chargesEnabled && stripeStatus.payoutsEnabled && (
           <div className="mb-8">
             <PaymentStatusCard
               stripeStatus={stripeStatus}
