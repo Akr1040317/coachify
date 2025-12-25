@@ -12,6 +12,7 @@ import { updateUserData } from "@/lib/firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase/config";
 import { checkStripeConnectStatus } from "@/lib/firebase/stripe-helpers";
+import { getAuth } from "firebase/auth";
 
 interface CoachOnboardingProps {
   currentStep: number;
@@ -96,12 +97,56 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
   }, [userId]);
 
   const uploadFile = async (file: File, path: string): Promise<string> => {
-    if (!storage) {
-      throw new Error("Storage is not initialized");
+    // Try using API route first (bypasses CORS issues)
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      // Get ID token for authentication
+      const idToken = await user.getIdToken();
+      
+      // Create form data
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("path", path);
+
+      // Upload via API route
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Upload failed" }));
+        throw new Error(errorData.error || `Upload failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.downloadURL;
+    } catch (apiError: any) {
+      console.warn("API upload failed, trying direct Firebase Storage:", apiError);
+      
+      // Fallback to direct Firebase Storage upload (works if CORS is configured)
+      if (!storage) {
+        throw new Error("Storage is not initialized");
+      }
+      
+      try {
+        const storageRef = ref(storage, path);
+        await uploadBytes(storageRef, file);
+        return getDownloadURL(storageRef);
+      } catch (directError: any) {
+        // If both fail, throw the API error as it's more likely to be the real issue
+        throw new Error(`Upload failed: ${apiError.message || directError.message}`);
+      }
     }
-    const storageRef = ref(storage, path);
-    await uploadBytes(storageRef, file);
-    return getDownloadURL(storageRef);
   };
 
   // Helper to convert file to base64 for storage
@@ -708,4 +753,5 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
     </WizardStepShell>
   );
 }
+
 
