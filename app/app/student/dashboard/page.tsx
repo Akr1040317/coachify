@@ -146,7 +146,7 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
                   return {
                     ...course,
                     coachName: coach.displayName,
-                    coachAvatar: coach.avatarUrl || coach.photoURL,
+                    coachAvatar: coach.avatarUrl,
                   };
                 }
                 return null;
