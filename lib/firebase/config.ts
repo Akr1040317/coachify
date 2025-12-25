@@ -22,28 +22,36 @@ let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
 let analytics: Analytics | null = null;
 
-if (typeof window !== "undefined") {
-  try {
-    if (!getApps().length) {
-      app = initializeApp(firebaseConfig);
+// Initialize Firebase for both client and server
+try {
+  if (!getApps().length) {
+    app = initializeApp(firebaseConfig);
+    
+    // Analytics only works on client side
+    if (typeof window !== "undefined") {
       try {
         analytics = getAnalytics(app);
       } catch (error) {
         // Analytics might fail in development, that's okay
         console.warn("Analytics initialization failed:", error);
       }
-    } else {
-      app = getApps()[0];
     }
-    
-    if (app) {
-      auth = getAuth(app);
-      db = getFirestore(app);
-      storage = getStorage(app);
-    }
-  } catch (error) {
-    console.error("Firebase initialization error:", error);
+  } else {
+    app = getApps()[0];
   }
+  
+  if (app) {
+    // Auth only works on client side
+    if (typeof window !== "undefined") {
+      auth = getAuth(app);
+    }
+    // Firestore works on both client and server
+    db = getFirestore(app);
+    // Storage works on both client and server
+    storage = getStorage(app);
+  }
+} catch (error) {
+  console.error("Firebase initialization error:", error);
 }
 
 export { app, auth, db, storage, analytics };

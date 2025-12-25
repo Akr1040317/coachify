@@ -112,6 +112,14 @@ export async function GET(request: NextRequest) {
           coachPayout.transactionIds
         );
 
+        // Update transfer metadata with payoutId for webhook tracking
+        await stripe.transfers.update(transfer.id, {
+          metadata: {
+            ...transfer.metadata,
+            payoutId,
+          },
+        });
+
         // Update payout record with platform fees
         const { updatePayout } = await import("@/lib/firebase/firestore");
         await updatePayout(payoutId, {

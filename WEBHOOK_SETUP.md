@@ -24,21 +24,34 @@ Webhooks are **essential** for your payment system to work correctly. They allow
    ```
    (Replace with your actual production domain)
 
-### Step 2: Select Required Events
+### Step 2: Configure Events Source
 
-Select these events (you can select multiple):
+**IMPORTANT**: You can only select **ONE** option (not both):
+
+**Select: "Connected and v2 accounts"**
+
+This is required because:
+- ✅ You **need** `account.updated` events to track when coaches complete Stripe Connect onboarding
+- ✅ Payment events (`checkout.session.completed`, `payment_intent.succeeded`, `transfer.*`, `charge.*`) should still be delivered since you're managing these connected accounts
+
+**If payment events don't come through**, you'll need to create a **second webhook endpoint** set to "Your account" for those events.
+
+Set **API version** to: `2025-12-15.clover` (or latest available)
+
+### Step 3: Select Required Events
+
+Select these specific events (you can search for them):
 
 **Payment Events:**
 - ✅ `checkout.session.completed` - When a payment is completed
 - ✅ `payment_intent.succeeded` - When payment succeeds
 
 **Connect Account Events:**
-- ✅ `account.updated` - When coach's Stripe account status changes
+- ✅ `account.updated` - When coach's Stripe account status changes (requires "Connected and v2 accounts" selected above)
 
 **Transfer/Payout Events:**
 - ✅ `transfer.created` - When payout transfer is created
-- ✅ `transfer.paid` - When payout is successfully sent
-- ✅ `transfer.failed` - When payout fails
+- ✅ `transfer.updated` - When transfer status changes (tracks paid/failed status)
 
 **Refund/Dispute Events:**
 - ✅ `charge.refunded` - When a refund is processed
@@ -52,7 +65,7 @@ Select these events (you can select multiple):
 3. Click **Reveal** and copy the secret (starts with `whsec_`)
 4. It will look like: `whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
-### Step 4: Add to Vercel Environment Variables
+### Step 5: Add to Vercel Environment Variables
 
 1. Go to your [Vercel Dashboard](https://vercel.com/dashboard)
 2. Select your project: **coachify**
@@ -63,7 +76,7 @@ Select these events (you can select multiple):
    - **Environment**: Production (and Preview if you want)
 5. Click **Save**
 
-### Step 5: Redeploy
+### Step 6: Redeploy
 
 After adding the webhook secret:
 1. Go to **Deployments** tab
@@ -97,14 +110,26 @@ Your webhook handler (`/api/webhooks/stripe/route.ts`) processes:
 | `checkout.session.completed` | Creates purchase record, adds to pending payout, enrolls student in course |
 | `payment_intent.succeeded` | Verifies payment status |
 | `transfer.created` | Records payout creation |
-| `transfer.paid` | Marks payout as paid |
-| `transfer.failed` | Marks payout as failed, adds funds back to pending |
+| `transfer.updated` | Updates payout status based on transfer status (paid/failed) |
 | `account.updated` | Updates coach's Stripe Connect status |
 | `charge.refunded` | Updates purchase status, reverses coach earnings |
 | `charge.dispute.created` | Creates dispute record, alerts admin |
 | `charge.dispute.updated` | Updates dispute status, handles resolution |
 
 ## Troubleshooting
+
+### Payment Events Not Coming Through
+
+If you selected "Connected and v2 accounts" but payment events (`checkout.session.completed`, `payment_intent.succeeded`) aren't being received:
+
+1. **Create a second webhook endpoint**:
+   - Go to Stripe Dashboard → Webhooks → Add endpoint
+   - Use the same URL: `https://coachify-ed.vercel.app/api/webhooks/stripe`
+   - Select **"Your account"** (instead of "Connected and v2 accounts")
+   - Select only payment events: `checkout.session.completed`, `payment_intent.succeeded`, `transfer.created`, `transfer.updated`, `charge.refunded`, `charge.dispute.created`, `charge.dispute.updated`
+   - Copy the signing secret and add it to Vercel as `STRIPE_WEBHOOK_SECRET` (same variable name - Stripe will handle routing)
+
+2. **Alternative**: Keep one endpoint with "Connected and v2 accounts" and test if payment events come through. If they do, you only need one endpoint.
 
 ### Webhook Not Receiving Events
 

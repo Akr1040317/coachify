@@ -143,29 +143,51 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Handle transfer.paid
-    if ((event.type as string) === "transfer.paid") {
+    // Handle transfer.updated (replaces transfer.paid and transfer.failed)
+    if (event.type === "transfer.updated") {
       const transfer = event.data.object as Stripe.Transfer;
-      const payoutId = transfer.metadata?.payoutId;
-      
-      if (payoutId) {
-        await updatePayoutStatus(payoutId, "paid");
-      }
-    }
-
-    // Handle transfer.failed
-    if ((event.type as string) === "transfer.failed") {
-      const transfer = event.data.object as Stripe.Transfer;
-      const payoutId = transfer.metadata?.payoutId;
+      let payoutId = transfer.metadata?.payoutId;
       const coachId = transfer.metadata?.coachId;
       
-      if (payoutId) {
-        await updatePayoutStatus(payoutId, "failed", (transfer as any).failure_message || "Transfer failed");
-        
-        // Add funds back to pending payout
-        if (coachId && transfer.amount > 0) {
-          await addToPendingPayout(coachId, transfer.amount, `failed-transfer-${transfer.id}`);
+      // If payoutId not in metadata, look it up by transferId
+      if (!payoutId) {
+        const { getPayouts } = await import("@/lib/firebase/firestore");
+        const payouts = await getPayouts([
+          where("transferId", "==", transfer.id)
+        ]);
+        if (payouts.length > 0) {
+          payoutId = payouts[0].id;
         }
+      }
+      
+      if (payoutId) {
+        // Check transfer status - Stripe transfers can be "paid", "pending", "failed", or "canceled"
+        // For Connect transfers, we check if it's reversed or has a failure_code
+        if (transfer.reversed) {
+          // Transfer was reversed (failed)
+          await updatePayoutStatus(payoutId, "failed", "Transfer was reversed");
+          
+          // Add funds back to pending payout
+          if (coachId && transfer.amount > 0) {
+            await addToPendingPayout(coachId, transfer.amount, `failed-transfer-${transfer.id}`);
+          }
+        } else if ((transfer as any).failure_code || (transfer as any).failure_message) {
+          // Transfer failed
+          await updatePayoutStatus(
+            payoutId, 
+            "failed", 
+            (transfer as any).failure_message || (transfer as any).failure_code || "Transfer failed"
+          );
+          
+          // Add funds back to pending payout
+          if (coachId && transfer.amount > 0) {
+            await addToPendingPayout(coachId, transfer.amount, `failed-transfer-${transfer.id}`);
+          }
+        } else if (transfer.status === "paid" || transfer.destination_payment) {
+          // Transfer succeeded (paid)
+          await updatePayoutStatus(payoutId, "paid");
+        }
+        // Note: "pending" status means transfer is still processing, we don't update status yet
       }
     }
 
