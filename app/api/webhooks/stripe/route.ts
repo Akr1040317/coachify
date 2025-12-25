@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
           if (coachId && transfer.amount > 0) {
             await addToPendingPayout(coachId, transfer.amount, `failed-transfer-${transfer.id}`);
           }
-        } else if (transfer.status === "paid" || transfer.destination_payment) {
+        } else if ((transfer as any).status === "paid" || (transfer as any).destination_payment) {
           // Transfer succeeded (paid)
           await updatePayoutStatus(payoutId, "paid");
         }
