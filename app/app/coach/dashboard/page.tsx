@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { onAuthChange } from "@/lib/firebase/auth";
-import { getCoachData, getCourses, getArticles, getVideos } from "@/lib/firebase/firestore";
+import { getCoachData, getCourses, getArticles, getVideos, getBookings, getStudentData, getCoachNotes } from "@/lib/firebase/firestore";
 import { where } from "firebase/firestore";
 import { User } from "firebase/auth";
 import { GradientCard } from "@/components/ui/GradientCard";
@@ -26,7 +26,9 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
   const [courses, setCourses] = useState<any[]>([]);
   const [articles, setArticles] = useState<any[]>([]);
   const [freeVideos, setFreeVideos] = useState<any[]>([]);
+  const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const [currentTab, setCurrentTab] = useState(activeTab);
   const [userId, setUserId] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -46,6 +48,13 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
       setCurrentTab(activeTab);
     }
   }, [activeTab]);
+
+  // Load students when students tab is active
+  useEffect(() => {
+    if (currentTab === "students" && userId && students.length === 0 && !loadingStudents) {
+      loadStudents(userId);
+    }
+  }, [currentTab, userId]);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -91,6 +100,10 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
     } else {
       setCurrentTab(tab);
     }
+    // Load students when switching to students tab
+    if (tab === "students" && userId && students.length === 0) {
+      loadStudents(userId);
+    }
   };
 
   const loadStripeStatus = async (coachId: string) => {
@@ -130,6 +143,42 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
       setPendingEarnings(amount);
     } catch (error) {
       console.error("Error loading pending earnings:", error);
+    }
+  };
+
+  const loadStudents = async (coachId: string) => {
+    setLoadingStudents(true);
+    try {
+      // Get all bookings to find unique students
+      const bookings = await getBookings([where("coachId", "==", coachId)]);
+      const uniqueStudentIds = [...new Set(bookings.map(b => b.studentId))];
+
+      const studentsData = await Promise.all(
+        uniqueStudentIds.map(async (studentId) => {
+          const student = await getStudentData(studentId);
+          const studentBookings = bookings.filter(b => b.studentId === studentId);
+          const notes = await getCoachNotes([
+            where("coachId", "==", coachId),
+            where("studentId", "==", studentId),
+          ]);
+
+          return {
+            id: studentId,
+            student,
+            bookingsCount: studentBookings.length,
+            lastSession: studentBookings.sort((a, b) => 
+              b.scheduledStart.toMillis() - a.scheduledStart.toMillis()
+            )[0],
+            notesCount: notes.length,
+          };
+        })
+      );
+
+      setStudents(studentsData);
+    } catch (error) {
+      console.error("Error loading students:", error);
+    } finally {
+      setLoadingStudents(false);
     }
   };
 
@@ -204,10 +253,81 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
         return (
           <div className="p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
-              <h2 className="text-3xl font-bold mb-6">Students</h2>
-              <GradientCard className="p-8">
-                <p className="text-gray-400">Your students will appear here.</p>
-              </GradientCard>
+              <h2 className="text-3xl font-bold mb-6">My Students</h2>
+              
+              {loadingStudents ? (
+                <div className="text-center py-12 text-gray-400">Loading students...</div>
+              ) : students.length === 0 ? (
+                <GradientCard className="p-8">
+                  <div className="text-center">
+                    <div className="text-6xl mb-4">👥</div>
+                    <p className="text-gray-400 text-lg mb-2">No students yet.</p>
+                    <p className="text-gray-500 text-sm">Start accepting bookings to see your students here.</p>
+                  </div>
+                </GradientCard>
+              ) : (
+                <div className="space-y-4">
+                  {students.map((studentData) => (
+                    <Link key={studentData.id} href={`/app/coach/student/${studentData.id}`}>
+                      <GradientCard className="cursor-pointer hover:scale-[1.02] transition-transform p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-lg">
+                                {(studentData.student?.displayName || "S")[0].toUpperCase()}
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-bold mb-1">
+                                  {studentData.student?.displayName || "Student"}
+                                </h3>
+                                <div className="flex gap-4 text-sm text-gray-400">
+                                  {studentData.student?.primarySport && (
+                                    <span>Primary Sport: {studentData.student.primarySport}</span>
+                                  )}
+                                  {studentData.student?.level && (
+                                    <span>Level: {studentData.student.level}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-6 mt-4 text-sm">
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <span className="text-gray-400">
+                                  {studentData.bookingsCount} {studentData.bookingsCount === 1 ? 'session' : 'sessions'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                                <span className="text-gray-400">
+                                  {studentData.notesCount} {studentData.notesCount === 1 ? 'note' : 'notes'}
+                                </span>
+                              </div>
+                              {studentData.lastSession && (
+                                <div className="flex items-center gap-2">
+                                  <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <span className="text-gray-400">
+                                    Last: {new Date(studentData.lastSession.scheduledStart.toMillis()).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <GlowButton variant="outline" size="sm">
+                            View Details →
+                          </GlowButton>
+                        </div>
+                      </GradientCard>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );
@@ -648,7 +768,7 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
               <svg className="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
-              <div className="text-2xl font-bold text-purple-400">0</div>
+              <div className="text-2xl font-bold text-purple-400">{students.length}</div>
             </div>
             <h3 className="text-lg font-semibold mb-1">Total Students</h3>
             <p className="text-gray-400 text-sm">Active students</p>
@@ -811,4 +931,5 @@ export default function CoachDashboardWrapper() {
   
   return <CoachDashboard activeTab={activeTab} setActiveTab={setActiveTab} />;
 }
+
 
