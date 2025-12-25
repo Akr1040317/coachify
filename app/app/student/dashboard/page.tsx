@@ -29,6 +29,8 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [coaches, setCoaches] = useState<any[]>([]);
+  const [allPublishedCourses, setAllPublishedCourses] = useState<any[]>([]);
+  const [allVerifiedCoaches, setAllVerifiedCoaches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTab, setCurrentTab] = useState(activeTab);
   const [selectedSport, setSelectedSport] = useState("All");
@@ -127,6 +129,40 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
             })
           );
           setCoaches(coachesData.filter((c) => c !== null));
+
+          // Load all published courses for library view
+          const allCoursesData = await getCourses([
+            where("isPublished", "==", true),
+            orderBy("createdAt", "desc"),
+          ]);
+          
+          // Filter courses from verified coaches only
+          const verifiedCoursesData = await Promise.all(
+            allCoursesData.map(async (course) => {
+              if (!course.coachId) return null;
+              try {
+                const coach = await getCoachData(course.coachId);
+                if (coach && coach.isVerified) {
+                  return {
+                    ...course,
+                    coachName: coach.displayName,
+                    coachAvatar: coach.avatarUrl || coach.photoURL,
+                  };
+                }
+                return null;
+              } catch {
+                return null;
+              }
+            })
+          );
+          setAllPublishedCourses(verifiedCoursesData.filter((c) => c !== null));
+
+          // Load all verified coaches for coaches view
+          const allCoachesData = await getCoaches([
+            where("status", "==", "active"),
+            where("isVerified", "==", true),
+          ]);
+          setAllVerifiedCoaches(allCoachesData);
         } catch (error) {
           console.error("Error loading student data:", error);
         } finally {
@@ -605,163 +641,13 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
       return 0;
     });
 
-    // Mock data for demonstration
-    const mockCoaches = [
-      {
-        id: "coach1",
-        displayName: "Sarah Johnson",
-        headline: "Professional Tennis Coach",
-        bio: "Former professional tennis player with 15+ years of coaching experience. Specialized in youth development and competitive training.",
-        sports: ["Tennis"],
-        avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-        isRecommended: true,
-        isVerified: true,
-        specialtiesBySport: { Tennis: ["Serve technique", "Footwork", "Mental game"] },
-        experienceType: "Professional",
-        credentials: ["USPTA Certified", "Former ATP Player"],
-      },
-      {
-        id: "coach2",
-        displayName: "Michael Chen",
-        headline: "Elite Basketball Trainer",
-        bio: "NBA training camp coach with expertise in shooting mechanics and game strategy. Trained 50+ Division I athletes.",
-        sports: ["Basketball"],
-        avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-        isRecommended: true,
-        isVerified: true,
-        specialtiesBySport: { Basketball: ["Shooting", "Ball handling", "Defense"] },
-        experienceType: "Professional",
-        credentials: ["NBA Certified Trainer", "NCAA Coach"],
-      },
-      {
-        id: "coach3",
-        displayName: "Emma Rodriguez",
-        headline: "Soccer Development Specialist",
-        bio: "Youth soccer coach with a passion for developing technical skills and tactical awareness in young athletes.",
-        sports: ["Soccer"],
-        avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop",
-        isRecommended: false,
-        isVerified: true,
-        specialtiesBySport: { Soccer: ["Dribbling", "Passing", "Positioning"] },
-        experienceType: "College",
-        credentials: ["USSF Licensed", "Youth Development Certified"],
-      },
-      {
-        id: "coach4",
-        displayName: "David Park",
-        headline: "Swimming Performance Coach",
-        bio: "Olympic-level swimming coach specializing in stroke technique and endurance training for competitive swimmers.",
-        sports: ["Swimming"],
-        avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
-        isRecommended: true,
-        isVerified: true,
-        specialtiesBySport: { Swimming: ["Freestyle", "Butterfly", "Endurance"] },
-        experienceType: "Professional",
-        credentials: ["USA Swimming Certified", "Olympic Coach"],
-      },
-      {
-        id: "coach5",
-        displayName: "Lisa Thompson",
-        headline: "Track & Field Expert",
-        bio: "Former Olympic athlete turned coach, specializing in sprinting and jumping events for high school and college athletes.",
-        sports: ["Track and Field"],
-        avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop",
-        isRecommended: false,
-        isVerified: true,
-        specialtiesBySport: { "Track and Field": ["Sprinting", "Long jump", "Training"] },
-        experienceType: "Professional",
-        credentials: ["USATF Certified", "Olympic Medalist"],
-      },
-      {
-        id: "coach6",
-        displayName: "James Wilson",
-        headline: "Baseball Pitching Coach",
-        bio: "Professional baseball pitching coach with expertise in mechanics, velocity development, and injury prevention.",
-        sports: ["Baseball"],
-        avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
-        isRecommended: true,
-        isVerified: true,
-        specialtiesBySport: { Baseball: ["Pitching mechanics", "Velocity", "Control"] },
-        experienceType: "Professional",
-        credentials: ["MLB Scout", "Pitching Specialist"],
-      },
-    ];
-
-    const mockCourses = [
-      {
-        id: "course1",
-        title: "Master the Tennis Serve",
-        description: "Learn professional serving techniques from a former ATP player",
-        sport: "Tennis",
-        skillLevel: "intermediate",
-        priceCents: 9900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1622163642998-8ea7fc5f3b72?w=600&h=400&fit=crop",
-        estimatedMinutes: 180,
-        coachId: "coach1",
-        coachName: "Sarah Johnson",
-        coachAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-      },
-      {
-        id: "course2",
-        title: "Basketball Shooting Mastery",
-        description: "Perfect your shooting form and increase your accuracy",
-        sport: "Basketball",
-        skillLevel: "beginner",
-        priceCents: 7900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1519869325932-c23c5c14e43e?w=600&h=400&fit=crop",
-        estimatedMinutes: 240,
-        coachId: "coach2",
-        coachName: "Michael Chen",
-        coachAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-      },
-      {
-        id: "course3",
-        title: "Soccer Fundamentals",
-        description: "Master the basics of soccer with professional techniques",
-        sport: "Soccer",
-        skillLevel: "beginner",
-        priceCents: 6900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&h=400&fit=crop",
-        estimatedMinutes: 200,
-        coachId: "coach3",
-        coachName: "Emma Rodriguez",
-        coachAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-      },
-      {
-        id: "course4",
-        title: "Swimming Technique Perfection",
-        description: "Improve your stroke technique and swimming efficiency",
-        sport: "Swimming",
-        skillLevel: "advanced",
-        priceCents: 11900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=600&h=400&fit=crop",
-        estimatedMinutes: 300,
-        coachId: "coach4",
-        coachName: "David Park",
-        coachAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
-      },
-      {
-        id: "course5",
-        title: "Track Sprint Training",
-        description: "Elite sprinting techniques and training methods",
-        sport: "Track and Field",
-        skillLevel: "competitive",
-        priceCents: 12900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=400&fit=crop",
-        estimatedMinutes: 360,
-        coachId: "coach5",
-        coachName: "Lisa Thompson",
-        coachAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
-      },
-    ];
-
-    // Filter out unverified coaches first
-    const verifiedCoaches = mockCoaches.filter((coach) => coach.isVerified === true);
+    // Use real data from Firebase - all verified coaches and published courses
+    const verifiedCoaches = allVerifiedCoaches || [];
     const verifiedCoachIds = new Set(verifiedCoaches.map((c) => c.id));
     
     // Filter coaches and courses by selected sport
     let filteredCoaches = [...verifiedCoaches];
-    let filteredCourses = mockCourses.filter((course) => verifiedCoachIds.has(course.coachId));
+    let filteredCourses = (allPublishedCourses || []).filter((course) => verifiedCoachIds.has(course.coachId));
 
     if (selectedSport !== "All") {
       filteredCoaches = filteredCoaches.filter((coach) => 
@@ -1445,184 +1331,13 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
   };
 
   const renderLibrary = () => {
-    // Mock catalog data - full course catalog like MasterClass
-    const catalogCourses = [
-      {
-        id: "course1",
-        title: "Master the Tennis Serve",
-        description: "Learn professional serving techniques from a former ATP player. Master power, placement, and consistency.",
-        sport: "Tennis",
-        skillLevel: "intermediate",
-        priceCents: 9900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1622163642998-8ea7fc5f3b72?w=600&h=400&fit=crop",
-        estimatedMinutes: 180,
-        coachId: "coach1",
-        coachName: "Sarah Johnson",
-        coachAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-15"),
-      },
-      {
-        id: "course2",
-        title: "Basketball Shooting Mastery",
-        description: "Perfect your shooting form and increase your accuracy. Learn from NBA-level trainers.",
-        sport: "Basketball",
-        skillLevel: "beginner",
-        priceCents: 7900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1519869325932-c23c5c14e43e?w=600&h=400&fit=crop",
-        estimatedMinutes: 240,
-        coachId: "coach2",
-        coachName: "Michael Chen",
-        coachAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-20"),
-      },
-      {
-        id: "course3",
-        title: "Soccer Fundamentals",
-        description: "Master the basics of soccer with professional techniques. Perfect for beginners starting their journey.",
-        sport: "Soccer",
-        skillLevel: "beginner",
-        priceCents: 6900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&h=400&fit=crop",
-        estimatedMinutes: 200,
-        coachId: "coach3",
-        coachName: "Emma Rodriguez",
-        coachAvatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-10"),
-      },
-      {
-        id: "course4",
-        title: "Swimming Technique Perfection",
-        description: "Improve your stroke technique and swimming efficiency. Advanced training for competitive swimmers.",
-        sport: "Swimming",
-        skillLevel: "advanced",
-        priceCents: 11900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=600&h=400&fit=crop",
-        estimatedMinutes: 300,
-        coachId: "coach4",
-        coachName: "David Park",
-        coachAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-25"),
-      },
-      {
-        id: "course5",
-        title: "Track Sprint Training",
-        description: "Elite sprinting techniques and training methods. Designed for competitive athletes.",
-        sport: "Track and Field",
-        skillLevel: "competitive",
-        priceCents: 12900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&h=400&fit=crop",
-        estimatedMinutes: 360,
-        coachId: "coach5",
-        coachName: "Lisa Thompson",
-        coachAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-18"),
-      },
-      {
-        id: "course6",
-        title: "Baseball Pitching Mechanics",
-        description: "Master the art of pitching with professional mechanics. Increase velocity and control.",
-        sport: "Baseball",
-        skillLevel: "intermediate",
-        priceCents: 10900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1566577739112-5180d4bf9390?w=600&h=400&fit=crop",
-        estimatedMinutes: 220,
-        coachId: "coach6",
-        coachName: "James Wilson",
-        coachAvatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-22"),
-      },
-      {
-        id: "course7",
-        title: "Volleyball Serving Power",
-        description: "Develop powerful and accurate serves. Learn jump serve and float serve techniques.",
-        sport: "Volleyball",
-        skillLevel: "intermediate",
-        priceCents: 8900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=600&h=400&fit=crop",
-        estimatedMinutes: 150,
-        coachId: "coach7",
-        coachName: "Alex Martinez",
-        coachAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-12"),
-      },
-      {
-        id: "course8",
-        title: "Golf Swing Fundamentals",
-        description: "Perfect your golf swing from the ground up. Learn proper form and consistency.",
-        sport: "Golf",
-        skillLevel: "beginner",
-        priceCents: 11900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=600&h=400&fit=crop",
-        estimatedMinutes: 280,
-        coachId: "coach8",
-        coachName: "Robert Lee",
-        coachAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-28"),
-      },
-      {
-        id: "course9",
-        title: "Cricket Batting Masterclass",
-        description: "Advanced batting techniques for power hitting and timing. Learn from professional players.",
-        sport: "Cricket",
-        skillLevel: "advanced",
-        priceCents: 13900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1534158914592-062992392be8?w=600&h=400&fit=crop",
-        estimatedMinutes: 320,
-        coachId: "coach9",
-        coachName: "Priya Sharma",
-        coachAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-14"),
-      },
-      {
-        id: "course10",
-        title: "American Football Quarterback Training",
-        description: "Develop elite quarterback skills. Learn throwing mechanics, footwork, and game reading.",
-        sport: "American Football",
-        skillLevel: "advanced",
-        priceCents: 14900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600&h=400&fit=crop",
-        estimatedMinutes: 400,
-        coachId: "coach10",
-        coachName: "Marcus Johnson",
-        coachAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-16"),
-      },
-      {
-        id: "course11",
-        title: "Martial Arts Striking Fundamentals",
-        description: "Master the fundamentals of striking. Learn proper form, power, and combinations.",
-        sport: "Martial Arts",
-        skillLevel: "beginner",
-        priceCents: 9900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1544966503-7cc5ac882d5f?w=600&h=400&fit=crop",
-        estimatedMinutes: 180,
-        coachId: "coach11",
-        coachName: "Kenji Tanaka",
-        coachAvatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-19"),
-      },
-      {
-        id: "course12",
-        title: "Esports Aim Training",
-        description: "Improve your aim and reaction time. Professional techniques used by competitive players.",
-        sport: "Esports",
-        skillLevel: "intermediate",
-        priceCents: 7900,
-        thumbnailUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&h=400&fit=crop",
-        estimatedMinutes: 120,
-        coachId: "coach12",
-        coachName: "Ryan Kim",
-        coachAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop",
-        createdAt: new Date("2024-01-21"),
-      },
-    ];
-
-    // Get verified coach IDs from catalogCoaches (in renderCoaches function)
-    // For now, we'll filter based on known verified coaches
-    // In production, this would come from actual Firebase data
-    const verifiedCoachIds = new Set(["coach1", "coach2", "coach3", "coach4", "coach5", "coach6", "coach8", "coach9", "coach10", "coach11"]);
+    // Use real data from Firebase - all published courses (already filtered for verified coaches)
+    const catalogCourses = allPublishedCourses || [];
     
-    // Filter out courses from unverified coaches
+    // Get verified coach IDs from allVerifiedCoaches
+    const verifiedCoachIds = new Set(allVerifiedCoaches.map((c) => c.id));
+    
+    // Filter out courses from unverified coaches (double-check, though already filtered in load)
     const verifiedCourses = catalogCourses.filter((course) => verifiedCoachIds.has(course.coachId));
     
     // Combine enrolled courses with catalog courses (mark enrolled ones)
@@ -1643,7 +1358,7 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
     }
 
     // Get verified coach IDs for course filtering
-    const verifiedCoachIdsForLibrary = new Set(["coach1", "coach2", "coach3", "coach4", "coach5", "coach6", "coach8", "coach9", "coach10", "coach11"]);
+    const verifiedCoachIdsForLibrary = new Set(allVerifiedCoaches.map((c) => c.id));
     
     // Calculate recommendation scores
     const coursesWithScores = filteredCourses.map((course) => ({
@@ -1840,226 +1555,11 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
   };
 
   const renderCoaches = () => {
-    // Mock coaches data - full catalog
-    const catalogCoaches = [
-      {
-        id: "coach1",
-        displayName: "Sarah Johnson",
-        headline: "Professional Tennis Coach",
-        bio: "Former professional tennis player with 15+ years of coaching experience. Specialized in youth development and competitive training.",
-        sports: ["Tennis"],
-        avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-        isRecommended: true,
-        isVerified: true,
-        specialtiesBySport: { Tennis: ["Serve technique", "Footwork", "Mental game"] },
-        experienceType: "Professional",
-        credentials: ["USPTA Certified", "Former ATP Player"],
-        sessionOffers: {
-          freeIntroEnabled: true,
-          freeIntroMinutes: 15,
-          paid: [{ minutes: 30, priceCents: 5000 }, { minutes: 60, priceCents: 9000 }],
-        },
-      },
-      {
-        id: "coach2",
-        displayName: "Michael Chen",
-        headline: "Elite Basketball Trainer",
-        bio: "NBA training camp coach with expertise in shooting mechanics and game strategy. Trained 50+ Division I athletes.",
-        sports: ["Basketball"],
-        avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-        isRecommended: true,
-        isVerified: true,
-        specialtiesBySport: { Basketball: ["Shooting", "Ball handling", "Defense"] },
-        experienceType: "Professional",
-        credentials: ["NBA Certified Trainer", "NCAA Coach"],
-        sessionOffers: {
-          freeIntroEnabled: true,
-          freeIntroMinutes: 15,
-          paid: [{ minutes: 30, priceCents: 6000 }, { minutes: 60, priceCents: 11000 }],
-        },
-      },
-      {
-        id: "coach3",
-        displayName: "Emma Rodriguez",
-        headline: "Soccer Development Specialist",
-        bio: "Youth soccer coach with a passion for developing technical skills and tactical awareness in young athletes.",
-        sports: ["Soccer"],
-        avatarUrl: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&h=400&fit=crop",
-        isRecommended: false,
-        isVerified: true,
-        specialtiesBySport: { Soccer: ["Dribbling", "Passing", "Positioning"] },
-        experienceType: "College",
-        credentials: ["USSF Licensed", "Youth Development Certified"],
-        sessionOffers: {
-          freeIntroEnabled: true,
-          freeIntroMinutes: 15,
-          paid: [{ minutes: 30, priceCents: 4000 }, { minutes: 60, priceCents: 7500 }],
-        },
-      },
-      {
-        id: "coach4",
-        displayName: "David Park",
-        headline: "Swimming Performance Coach",
-        bio: "Olympic-level swimming coach specializing in stroke technique and endurance training for competitive swimmers.",
-        sports: ["Swimming"],
-        avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
-        isRecommended: true,
-        isVerified: true,
-        specialtiesBySport: { Swimming: ["Freestyle", "Butterfly", "Endurance"] },
-        experienceType: "Professional",
-        credentials: ["USA Swimming Certified", "Olympic Coach"],
-        sessionOffers: {
-          freeIntroEnabled: false,
-          freeIntroMinutes: 0,
-          paid: [{ minutes: 30, priceCents: 7000 }, { minutes: 60, priceCents: 13000 }],
-        },
-      },
-      {
-        id: "coach5",
-        displayName: "Lisa Thompson",
-        headline: "Track & Field Expert",
-        bio: "Former Olympic athlete turned coach, specializing in sprinting and jumping events for high school and college athletes.",
-        sports: ["Track and Field"],
-        avatarUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=400&fit=crop",
-        isRecommended: false,
-        isVerified: true,
-        specialtiesBySport: { "Track and Field": ["Sprinting", "Long jump", "Training"] },
-        experienceType: "Professional",
-        credentials: ["USATF Certified", "Olympic Medalist"],
-        sessionOffers: {
-          freeIntroEnabled: true,
-          freeIntroMinutes: 15,
-          paid: [{ minutes: 30, priceCents: 5500 }, { minutes: 60, priceCents: 10000 }],
-        },
-      },
-      {
-        id: "coach6",
-        displayName: "James Wilson",
-        headline: "Baseball Pitching Coach",
-        bio: "Professional baseball pitching coach with expertise in mechanics, velocity development, and injury prevention.",
-        sports: ["Baseball"],
-        avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
-        isRecommended: true,
-        isVerified: true,
-        specialtiesBySport: { Baseball: ["Pitching mechanics", "Velocity", "Control"] },
-        experienceType: "Professional",
-        credentials: ["MLB Scout", "Pitching Specialist"],
-        sessionOffers: {
-          freeIntroEnabled: true,
-          freeIntroMinutes: 15,
-          paid: [{ minutes: 30, priceCents: 6500 }, { minutes: 60, priceCents: 12000 }],
-        },
-      },
-      {
-        id: "coach7",
-        displayName: "Alex Martinez",
-        headline: "Volleyball Strategy Coach",
-        bio: "Former professional volleyball player with expertise in serving, blocking, and team strategy. Coached multiple championship teams.",
-        sports: ["Volleyball"],
-        avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
-        isVerified: false,
-        specialtiesBySport: { Volleyball: ["Serving", "Blocking", "Strategy"] },
-        experienceType: "Professional",
-        credentials: ["FIVB Certified", "Championship Coach"],
-        sessionOffers: {
-          freeIntroEnabled: false,
-          freeIntroMinutes: 0,
-          paid: [{ minutes: 30, priceCents: 4500 }, { minutes: 60, priceCents: 8000 }],
-        },
-      },
-      {
-        id: "coach8",
-        displayName: "Robert Lee",
-        headline: "Golf Swing Master",
-        bio: "PGA certified instructor specializing in swing mechanics, short game, and course management. Helped hundreds of players improve their handicap.",
-        sports: ["Golf"],
-        avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-        isVerified: true,
-        specialtiesBySport: { Golf: ["Swing mechanics", "Short game", "Course management"] },
-        experienceType: "Professional",
-        credentials: ["PGA Certified", "Master Instructor"],
-        sessionOffers: {
-          freeIntroEnabled: true,
-          freeIntroMinutes: 15,
-          paid: [{ minutes: 30, priceCents: 8000 }, { minutes: 60, priceCents: 15000 }],
-        },
-      },
-      {
-        id: "coach9",
-        displayName: "Priya Sharma",
-        headline: "Cricket Batting Specialist",
-        bio: "Former international cricket player with expertise in batting techniques, power hitting, and match strategy.",
-        sports: ["Cricket"],
-        avatarUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-        isRecommended: true,
-        isVerified: true,
-        specialtiesBySport: { Cricket: ["Batting", "Power hitting", "Strategy"] },
-        experienceType: "Professional",
-        credentials: ["ICC Certified", "Former International Player"],
-        sessionOffers: {
-          freeIntroEnabled: true,
-          freeIntroMinutes: 15,
-          paid: [{ minutes: 30, priceCents: 5500 }, { minutes: 60, priceCents: 10000 }],
-        },
-      },
-      {
-        id: "coach10",
-        displayName: "Marcus Johnson",
-        headline: "Quarterback Development Coach",
-        bio: "Former NFL quarterback coach specializing in throwing mechanics, footwork, and game reading. Trained multiple college and professional QBs.",
-        sports: ["American Football"],
-        avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-        isVerified: true,
-        specialtiesBySport: { "American Football": ["QB mechanics", "Footwork", "Game reading"] },
-        experienceType: "Professional",
-        credentials: ["NFL Coach", "QB Specialist"],
-        sessionOffers: {
-          freeIntroEnabled: false,
-          freeIntroMinutes: 0,
-          paid: [{ minutes: 30, priceCents: 9000 }, { minutes: 60, priceCents: 17000 }],
-        },
-      },
-      {
-        id: "coach11",
-        displayName: "Kenji Tanaka",
-        headline: "Martial Arts Master",
-        bio: "5th degree black belt with 20+ years of teaching experience. Specializes in striking, grappling, and competition preparation.",
-        sports: ["Martial Arts"],
-        avatarUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
-        isVerified: true,
-        specialtiesBySport: { "Martial Arts": ["Striking", "Grappling", "Competition prep"] },
-        experienceType: "Professional",
-        credentials: ["5th Dan Black Belt", "Master Instructor"],
-        sessionOffers: {
-          freeIntroEnabled: true,
-          freeIntroMinutes: 15,
-          paid: [{ minutes: 30, priceCents: 5000 }, { minutes: 60, priceCents: 9000 }],
-        },
-      },
-      {
-        id: "coach12",
-        displayName: "Ryan Kim",
-        headline: "Esports Performance Coach",
-        bio: "Professional esports coach with expertise in aim training, game sense, and mental performance. Coached multiple competitive teams.",
-        sports: ["Esports"],
-        avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
-        isVerified: false,
-        specialtiesBySport: { Esports: ["Aim training", "Game sense", "Mental performance"] },
-        experienceType: "Professional",
-        credentials: ["Pro Team Coach", "Performance Specialist"],
-        sessionOffers: {
-          freeIntroEnabled: true,
-          freeIntroMinutes: 15,
-          paid: [{ minutes: 30, priceCents: 3500 }, { minutes: 60, priceCents: 6000 }],
-        },
-      },
-    ];
-
-    // Filter out unverified coaches first
-    const verifiedCatalogCoaches = catalogCoaches.filter((coach) => coach.isVerified === true);
+    // Use real data from Firebase - all verified coaches (already filtered)
+    const catalogCoaches = allVerifiedCoaches || [];
     
     // Mark coaches that student has booked with
-    const allCoaches = verifiedCatalogCoaches.map((coach) => {
+    const allCoaches = catalogCoaches.map((coach) => {
       const coachBookings = bookings.filter((b) => b.coachId === coach.id);
       return { ...coach, hasBooked: coachBookings.length > 0, bookingCount: coachBookings.length };
     });
@@ -2251,4 +1751,5 @@ export default function StudentDashboardWrapper() {
 
   return <StudentDashboard activeTab={activeTab} setActiveTab={setActiveTab} />;
 }
+
 
