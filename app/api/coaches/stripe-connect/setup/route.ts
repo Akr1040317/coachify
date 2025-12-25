@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getCoachData, updateCoachData, getUserData } from "@/lib/firebase/firestore";
+import { getCoachDataAdmin, updateCoachDataAdmin, getUserDataAdmin } from "@/lib/firebase/firestore-admin";
 
 // Initialize Stripe with error handling
 function getStripe(): Stripe | null {
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get coach data
-    const coach = await getCoachData(coachId);
+    const coach = await getCoachDataAdmin(coachId);
     if (!coach) {
       return NextResponse.json({ error: "Coach not found" }, { status: 404 });
     }
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user email from user document
-    const userData = await getUserData(coachId);
+    const userData = await getUserDataAdmin(coachId);
     if (!userData || !userData.email) {
       return NextResponse.json({ 
         error: "User email not found. Please complete your profile.",
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Store Stripe Connect account ID in coach document
-    await updateCoachData(coachId, {
+    await updateCoachDataAdmin(coachId, {
       stripeConnectAccountId: account.id,
       stripeConnectStatus: "pending",
     });

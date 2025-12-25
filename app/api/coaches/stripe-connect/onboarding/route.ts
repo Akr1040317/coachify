@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getCoachData } from "@/lib/firebase/firestore";
+import { getCoachDataAdmin } from "@/lib/firebase/firestore-admin";
 
 // Initialize Stripe with error handling
 function getStripe(): Stripe | null {
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get coach data
-    const coach = await getCoachData(coachId);
+    const coach = await getCoachDataAdmin(coachId);
     if (!coach) {
       return NextResponse.json({ error: "Coach not found" }, { status: 404 });
     }
