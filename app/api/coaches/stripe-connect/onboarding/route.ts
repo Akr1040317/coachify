@@ -49,7 +49,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create onboarding link
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    // Ensure HTTPS for production (Stripe requires HTTPS for live mode)
+    let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    if (process.env.NODE_ENV === "production" && !baseUrl.startsWith("https://")) {
+      // Default to production URL if not set
+      baseUrl = "https://coachify-ed.vercel.app";
+    }
+    // Ensure HTTPS in production
+    if (process.env.NODE_ENV === "production") {
+      baseUrl = baseUrl.replace(/^http:/, "https:");
+    }
+    
     const accountLink = await stripe.accountLinks.create({
       account: coach.stripeConnectAccountId,
       refresh_url: `${baseUrl}/app/coach/onboarding/stripe?refresh=true`,
