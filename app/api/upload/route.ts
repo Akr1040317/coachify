@@ -73,14 +73,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get Firebase Storage bucket
-    const bucket = getStorage(adminApp).bucket();
+    // Get Firebase Storage bucket - explicitly specify bucket name
+    console.log("📦 Getting Firebase Storage bucket...");
+    const storage = getStorage(adminApp);
+    const bucket = storage.bucket("coachify-21435.firebasestorage.app");
+    console.log("✅ Bucket retrieved:", bucket.name);
     
     // Convert File to Buffer
+    console.log("📄 Converting file to buffer...", { fileName: file.name, fileSize: file.size, fileType: file.type });
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    console.log("✅ File converted to buffer, size:", buffer.length);
 
     // Upload file
+    console.log("⬆️ Uploading file to path:", path);
     const fileRef = bucket.file(path);
     await fileRef.save(buffer, {
       metadata: {
@@ -91,6 +97,7 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+    console.log("✅ File uploaded successfully");
 
     // Determine if file should be public (intro videos, avatars, etc. are public)
     const isPublicFile = path.includes("intro-video") || 
@@ -121,9 +128,18 @@ export async function POST(request: NextRequest) {
       });
     }
   } catch (error: any) {
-    console.error("Upload error:", error);
+    console.error("❌ Upload error:", error);
+    console.error("Error details:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      name: error.name,
+    });
     return NextResponse.json(
-      { error: error.message || "Upload failed" },
+      { 
+        error: error.message || "Upload failed",
+        details: process.env.NODE_ENV === "development" ? error.stack : undefined,
+      },
       { status: 500 }
     );
   }

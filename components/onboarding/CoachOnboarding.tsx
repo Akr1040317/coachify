@@ -196,12 +196,15 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
     let avatarUrl = formData.profilePhotoUrl;
     let introVideoUrl = formData.introVideoUrl;
 
-    // Upload files if provided
-    if (formData.introVideo && storage) {
-      console.log("📹 Uploading intro video...");
+    // Note: Intro video is now uploaded immediately when selected, so we just use the existing URL
+    // Only upload if we have a file but no URL (shouldn't happen, but safety check)
+    if (formData.introVideo && !introVideoUrl && storage) {
+      console.log("📹 Intro video file exists but no URL, uploading now...");
       try {
         introVideoUrl = await uploadFile(formData.introVideo, `coaches/${userId}/intro-video`);
         console.log("✅ Intro video uploaded successfully:", introVideoUrl);
+        // Update formData with the new URL
+        setFormData(prev => ({ ...prev, introVideoUrl }));
       } catch (error: any) {
         console.warn("⚠️ Failed to upload intro video:", error);
         console.warn("Error details:", {
@@ -734,12 +737,33 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
                     <input
                       type="file"
                       accept="video/*"
-                      onChange={(e) => setFormData({ ...formData, introVideo: e.target.files?.[0] || null })}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0] || null;
+                        if (file) {
+                          console.log("📹 Video file selected, starting upload immediately...");
+                          setFormData({ ...formData, introVideo: file, introVideoUrl: "" }); // Clear URL while uploading
+                          
+                          try {
+                            const videoUrl = await uploadFile(file, `coaches/${userId}/intro-video`);
+                            console.log("✅ Intro video uploaded successfully:", videoUrl);
+                            setFormData(prev => ({ ...prev, introVideoUrl: videoUrl }));
+                          } catch (error: any) {
+                            console.error("❌ Failed to upload intro video:", error);
+                            // Keep the file selected so user can try again, but show error
+                            alert(`Failed to upload video: ${error.message || "Unknown error"}. Please try again.`);
+                          }
+                        } else {
+                          setFormData({ ...formData, introVideo: null });
+                        }
+                      }}
                       className="hidden"
+                      disabled={formData.introVideoUrl === "" && formData.introVideo !== null} // Disable while uploading
                     />
                     <div className="text-gray-400">
-                      {formData.introVideo ? (
-                        <span className="text-blue-400">✓ Video selected: {formData.introVideo.name}</span>
+                      {formData.introVideoUrl ? (
+                        <span className="text-green-400">✓ Video uploaded successfully: {formData.introVideo?.name || "intro-video"}</span>
+                      ) : formData.introVideo ? (
+                        <span className="text-yellow-400">⏳ Uploading video: {formData.introVideo.name}...</span>
                       ) : (
                         <>
                           <span className="text-6xl block mb-4">🎥</span>

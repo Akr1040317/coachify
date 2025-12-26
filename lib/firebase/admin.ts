@@ -34,6 +34,7 @@ function getAdminApp(): App | undefined {
         adminApp = initializeApp({
           credential: cert(serviceAccount),
           projectId: "coachify-21435",
+          storageBucket: "coachify-21435.firebasestorage.app",
         });
         
         console.log("Firebase Admin initialized with service account");
@@ -50,6 +51,7 @@ function getAdminApp(): App | undefined {
       console.log("Initializing Firebase Admin without service account (using default credentials)");
       adminApp = initializeApp({
         projectId: "coachify-21435",
+        storageBucket: "coachify-21435.firebasestorage.app",
       });
       return adminApp;
     }
@@ -79,3 +81,4 @@ function getAdminDb(): Firestore | undefined {
 }
 
 export { getAdminApp, getAdminDb };
+
