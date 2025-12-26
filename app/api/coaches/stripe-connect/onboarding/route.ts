@@ -87,12 +87,37 @@ export async function POST(request: NextRequest) {
       baseUrl = baseUrl.replace(/^http:/, "https:");
     }
     
-    const accountLink = await stripe.accountLinks.create({
-      account: coach.stripeConnectAccountId,
-      refresh_url: `${baseUrl}/app/coach/onboarding/stripe?refresh=true`,
-      return_url: `${baseUrl}/app/coach/onboarding/stripe?stripe=success`,
-      type: "account_onboarding",
-    });
+    let accountLink;
+    try {
+      accountLink = await stripe.accountLinks.create({
+        account: coach.stripeConnectAccountId,
+        refresh_url: `${baseUrl}/app/coach/onboarding/stripe?refresh=true`,
+        return_url: `${baseUrl}/app/coach/onboarding/stripe?stripe=success`,
+        type: "account_onboarding",
+      });
+    } catch (stripeError: any) {
+      console.error("Stripe accountLinks.create error:", stripeError);
+      console.error("Error type:", stripeError.type);
+      console.error("Error code:", stripeError.code);
+      console.error("Error message:", stripeError.message);
+      console.error("Account ID:", coach.stripeConnectAccountId);
+      
+      return NextResponse.json({ 
+        error: "Failed to generate onboarding link",
+        code: "STRIPE_ACCOUNT_LINK_ERROR",
+        details: {
+          stripeError: stripeError.message,
+          stripeErrorType: stripeError.type,
+          stripeErrorCode: stripeError.code,
+          accountId: coach.stripeConnectAccountId,
+          baseUrl,
+          ...(process.env.NODE_ENV === "development" ? {
+            fullError: stripeError.toString(),
+            stack: stripeError.stack
+          } : {})
+        }
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ 
       onboardingUrl: accountLink.url,
@@ -100,6 +125,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Error creating onboarding link:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Error type:", error.type);
+    console.error("Error code:", error.code);
     
     let errorMessage = "Failed to generate onboarding link";
     let errorCode = "STRIPE_ERROR";
@@ -107,12 +135,22 @@ export async function POST(request: NextRequest) {
     if (error.type === "StripeInvalidRequestError") {
       errorMessage = error.message || "Invalid request to Stripe";
       errorCode = "INVALID_REQUEST";
+    } else if (error.message) {
+      errorMessage = error.message;
     }
     
     return NextResponse.json({ 
       error: errorMessage,
       code: errorCode,
-      details: process.env.NODE_ENV === "development" ? error.message : undefined
+      details: {
+        message: error.message,
+        type: error.type,
+        code: error.code,
+        ...(process.env.NODE_ENV === "development" ? {
+          stack: error.stack,
+          fullError: error.toString()
+        } : {})
+      }
     }, { status: 500 });
   }
 }
@@ -238,6 +276,7 @@ export async function GET(request: NextRequest) {
     console.error("Error stack:", error.stack);
     console.error("Error type:", error.type);
     console.error("Error code:", error.code);
+    console.error("Error message:", error.message);
     
     let errorMessage = "Failed to check account status";
     let errorCode = "STRIPE_ERROR";
@@ -261,6 +300,7 @@ export async function GET(request: NextRequest) {
       statusCode = 503; // Service Unavailable
     }
     
+    // Always return error details in production for debugging
     return NextResponse.json({ 
       hasAccount: false,
       status: "error",
@@ -269,12 +309,15 @@ export async function GET(request: NextRequest) {
       detailsSubmitted: false,
       error: errorMessage,
       code: errorCode,
-      details: process.env.NODE_ENV === "development" ? {
+      details: {
         message: error.message,
         type: error.type,
         code: error.code,
-        stack: error.stack
-      } : undefined
+        ...(process.env.NODE_ENV === "development" ? {
+          stack: error.stack,
+          fullError: error.toString()
+        } : {})
+      }
     }, { status: statusCode });
   }
 }
