@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { getCoachDataAdmin } from "@/lib/firebase/firestore-admin";
+import { getCoachDataAdmin, updateCoachDataAdmin } from "@/lib/firebase/firestore-admin";
 import { getStripeSecretKey } from "@/lib/config/stripe";
 
 // Initialize Stripe with error handling
@@ -103,6 +103,50 @@ export async function POST(request: NextRequest) {
       console.error("Error code:", stripeError.code);
       console.error("Error message:", stripeError.message);
       console.error("Account ID:", coach.stripeConnectAccountId);
+      
+      // Handle test/live mode mismatch - clear the invalid account ID
+      if (stripeError.message && stripeError.message.includes("test mode account link for an account that was created in live mode")) {
+        console.warn("Test/live mode mismatch detected. Clearing invalid account ID from Firestore.");
+        try {
+          await updateCoachDataAdmin(coachId, {
+            stripeConnectAccountId: undefined,
+            stripeConnectStatus: undefined,
+          });
+          return NextResponse.json({ 
+            error: "Account was created in a different mode. Please create a new account.",
+            code: "MODE_MISMATCH",
+            details: {
+              message: "The Stripe Connect account was created in live mode, but you're now using test mode. The account ID has been cleared. Please create a new account.",
+              accountId: coach.stripeConnectAccountId,
+              cleared: true
+            }
+          }, { status: 400 });
+        } catch (updateError: any) {
+          console.error("Failed to clear account ID:", updateError);
+        }
+      }
+      
+      // Handle live mode account link for test mode account
+      if (stripeError.message && stripeError.message.includes("live mode account link for an account that was created in test mode")) {
+        console.warn("Test/live mode mismatch detected. Clearing invalid account ID from Firestore.");
+        try {
+          await updateCoachDataAdmin(coachId, {
+            stripeConnectAccountId: undefined,
+            stripeConnectStatus: undefined,
+          });
+          return NextResponse.json({ 
+            error: "Account was created in a different mode. Please create a new account.",
+            code: "MODE_MISMATCH",
+            details: {
+              message: "The Stripe Connect account was created in test mode, but you're now using live mode. The account ID has been cleared. Please create a new account.",
+              accountId: coach.stripeConnectAccountId,
+              cleared: true
+            }
+          }, { status: 400 });
+        } catch (updateError: any) {
+          console.error("Failed to clear account ID:", updateError);
+        }
+      }
       
       // Always return error details for debugging
       return NextResponse.json({ 
