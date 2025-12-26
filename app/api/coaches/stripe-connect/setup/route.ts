@@ -60,10 +60,66 @@ export async function POST(request: NextRequest) {
 
     // Check if coach already has a Stripe Connect account
     if (coach.stripeConnectAccountId) {
+      // Return existing account and create onboarding link if needed
+      let onboardingUrl = null;
+      try {
+        // Check account status
+        const account = await stripe.accounts.retrieve(coach.stripeConnectAccountId);
+        
+        // If account needs onboarding, create a new onboarding link
+        if (!account.details_submitted || !account.charges_enabled || !account.payouts_enabled) {
+          let baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+          if (process.env.NODE_ENV === "production" && !baseUrl.startsWith("https://")) {
+            baseUrl = "https://coachify-ed.vercel.app";
+          }
+          if (process.env.NODE_ENV === "production") {
+            baseUrl = baseUrl.replace(/^http:/, "https:");
+          }
+          
+          const accountLink = await stripe.accountLinks.create({
+            account: coach.stripeConnectAccountId,
+            refresh_url: `${baseUrl}/app/coach/onboarding/stripe?refresh=true`,
+            return_url: `${baseUrl}/app/coach/onboarding/stripe?stripe=success`,
+            type: "account_onboarding",
+          });
+          onboardingUrl = accountLink.url;
+        }
+      } catch (stripeError: any) {
+        // If account doesn't exist in Stripe, allow creating a new one
+        if (stripeError.type === "StripeInvalidRequestError" && stripeError.code === "resource_missing") {
+          // Clear the invalid account ID and continue with creation
+          await updateCoachDataAdmin(coachId, {
+            stripeConnectAccountId: undefined,
+            stripeConnectStatus: undefined,
+          });
+          // Continue to create new account below
+        } else {
+          // Other Stripe errors - return existing account ID
+          return NextResponse.json({ 
+            accountId: coach.stripeConnectAccountId,
+            onboardingUrl,
+            message: "Account exists but could not verify status",
+            error: stripeError.message
+          }, { status: 200 });
+        }
+      }
+      
+      // If we have an onboarding URL, return it
+      if (onboardingUrl) {
+        return NextResponse.json({ 
+          accountId: coach.stripeConnectAccountId,
+          onboardingUrl,
+          existing: true,
+          message: "Account exists, onboarding link created"
+        });
+      }
+      
+      // Account exists and is fully set up
       return NextResponse.json({ 
-        error: "Stripe Connect account already exists",
-        accountId: coach.stripeConnectAccountId 
-      }, { status: 400 });
+        accountId: coach.stripeConnectAccountId,
+        existing: true,
+        message: "Stripe Connect account already exists and is active"
+      });
     }
 
     // Get user email from user document

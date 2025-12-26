@@ -127,7 +127,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Coach ID is required" }, { status: 400 });
     }
 
-    const coach = await getCoachDataAdmin(coachId);
+    let coach;
+    try {
+      coach = await getCoachDataAdmin(coachId);
+    } catch (dbError: any) {
+      console.error("Error fetching coach data:", dbError);
+      return NextResponse.json({ 
+        hasAccount: false,
+        status: "not_setup",
+        chargesEnabled: false,
+        payoutsEnabled: false,
+        detailsSubmitted: false,
+        error: "Failed to fetch coach data",
+        code: "DATABASE_ERROR",
+        details: process.env.NODE_ENV === "development" ? dbError.message : undefined
+      }, { status: 500 });
+    }
     if (!coach) {
       return NextResponse.json({ 
         hasAccount: false,
@@ -207,20 +222,47 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Error checking account status:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Error type:", error.type);
+    console.error("Error code:", error.code);
     
     let errorMessage = "Failed to check account status";
     let errorCode = "STRIPE_ERROR";
+    let statusCode = 500;
     
     if (error.type === "StripeInvalidRequestError") {
       errorMessage = error.message || "Invalid request to Stripe";
       errorCode = "INVALID_REQUEST";
+      // If it's a resource_missing error, return not_setup instead of 500
+      if (error.code === "resource_missing") {
+        return NextResponse.json({ 
+          hasAccount: false,
+          status: "not_setup",
+          chargesEnabled: false,
+          payoutsEnabled: false,
+          detailsSubmitted: false,
+        });
+      }
+    } else if (error.code === "STRIPE_NOT_CONFIGURED") {
+      errorCode = "STRIPE_NOT_CONFIGURED";
+      statusCode = 503; // Service Unavailable
     }
     
     return NextResponse.json({ 
+      hasAccount: false,
+      status: "error",
+      chargesEnabled: false,
+      payoutsEnabled: false,
+      detailsSubmitted: false,
       error: errorMessage,
       code: errorCode,
-      details: process.env.NODE_ENV === "development" ? error.message : undefined
-    }, { status: 500 });
+      details: process.env.NODE_ENV === "development" ? {
+        message: error.message,
+        type: error.type,
+        code: error.code,
+        stack: error.stack
+      } : undefined
+    }, { status: statusCode });
   }
 }
 
