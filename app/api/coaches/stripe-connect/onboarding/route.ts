@@ -49,8 +49,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Coach ID is required" }, { status: 400 });
     }
 
-    // Get coach data
-    const coach = await getCoachDataAdmin(coachId);
+    // Get coach data with error handling
+    let coach;
+    try {
+      coach = await getCoachDataAdmin(coachId);
+    } catch (dbError: any) {
+      console.error("Error fetching coach data:", dbError);
+      return NextResponse.json({ 
+        error: "Failed to fetch coach data",
+        code: "DATABASE_ERROR",
+        details: process.env.NODE_ENV === "development" ? {
+          message: dbError.message,
+          stack: dbError.stack
+        } : undefined
+      }, { status: 500 });
+    }
     if (!coach) {
       return NextResponse.json({ error: "Coach not found" }, { status: 404 });
     }
