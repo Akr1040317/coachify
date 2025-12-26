@@ -58,7 +58,20 @@ export function InteractiveQuestion({
           )}
 
           <button
-            onClick={onNext}
+            onClick={() => {
+              console.log("🖱️ Continue button clicked!");
+              console.log("Button state:", {
+                canProceed,
+                question,
+                disabled: !canProceed,
+              });
+              if (canProceed) {
+                console.log("Calling onNext handler...");
+                onNext();
+              } else {
+                console.warn("⚠️ Button clicked but canProceed is false - action blocked");
+              }
+            }}
             disabled={!canProceed}
             className={`
               px-10 py-4 text-lg rounded-xl font-semibold transition-all duration-200
@@ -75,4 +88,5 @@ export function InteractiveQuestion({
     </AnimatePresence>
   );
 }
+
 

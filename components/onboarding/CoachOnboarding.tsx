@@ -55,8 +55,28 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
 
   useEffect(() => {
     // Reset question index when step changes
+    console.log("🔄 Step changed to:", currentStep);
+    console.log("Resetting question index to 0");
     setQuestionIndex(0);
   }, [currentStep]);
+
+  useEffect(() => {
+    console.log("📊 Component state update:", {
+      currentStep,
+      questionIndex,
+      totalSteps,
+      formData: {
+        price30Min: formData.price30Min,
+        price60Min: formData.price60Min,
+        bio: formData.bio?.substring(0, 30),
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        headline: formData.headline,
+        sports: formData.sports.length,
+        experienceType: formData.experienceType,
+      },
+    });
+  }, [currentStep, questionIndex, formData.price30Min, formData.price60Min, formData.bio, formData.firstName, formData.lastName, formData.headline, formData.sports.length, formData.experienceType]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -160,15 +180,34 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
   };
 
   const saveData = async () => {
+    console.log("💾 saveData called for step", currentStep);
+    console.log("Form data snapshot:", {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      headline: formData.headline,
+      sports: formData.sports,
+      bio: formData.bio?.substring(0, 50),
+      price30Min: formData.price30Min,
+      price60Min: formData.price60Min,
+      hasIntroVideo: !!formData.introVideo,
+      introVideoUrl: formData.introVideoUrl,
+    });
+
     let avatarUrl = formData.profilePhotoUrl;
     let introVideoUrl = formData.introVideoUrl;
 
     // Upload files if provided
     if (formData.introVideo && storage) {
+      console.log("📹 Uploading intro video...");
       try {
         introVideoUrl = await uploadFile(formData.introVideo, `coaches/${userId}/intro-video`);
-      } catch (error) {
-        console.warn("Failed to upload intro video:", error);
+        console.log("✅ Intro video uploaded successfully:", introVideoUrl);
+      } catch (error: any) {
+        console.warn("⚠️ Failed to upload intro video:", error);
+        console.warn("Error details:", {
+          message: error.message,
+          stack: error.stack,
+        });
         // Keep existing URL if upload fails
       }
     }
@@ -209,12 +248,31 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
       ratingCount: 0,
     };
 
+    console.log("📝 Saving coach data...");
+    console.log("Coach data to save:", {
+      userId,
+      displayName: coachData.displayName,
+      headline: coachData.headline,
+      sports: coachData.sports,
+      hasBio: !!coachData.bio,
+      hasIntroVideoUrl: !!coachData.introVideoUrl,
+      sessionOffers: coachData.sessionOffers,
+    });
+
     const existing = await getCoachData(userId);
+    console.log("Existing coach data found:", !!existing);
+    
     if (existing) {
+      console.log("Updating existing coach data...");
       await updateCoachData(userId, coachData);
+      console.log("✅ Coach data updated");
     } else {
+      console.log("Creating new coach data...");
       await createCoachData(userId, coachData);
+      console.log("✅ Coach data created");
     }
+    
+    console.log("💾 saveData completed");
   };
 
   // Get questions for current step
@@ -250,23 +308,43 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
   const isLastQuestionInStep = stepQuestions.length > 0 && questionIndex === stepQuestions.length - 1;
 
   const handleNext = async () => {
+    console.log("=== handleNext called ===");
+    console.log("Current step:", currentStep);
+    console.log("Total steps:", totalSteps);
+    console.log("Question index:", questionIndex);
+    console.log("Step questions length:", stepQuestions.length);
+    console.log("Is last question in step:", isLastQuestionInStep);
+    console.log("Form data:", {
+      price30Min: formData.price30Min,
+      price60Min: formData.price60Min,
+      freeIntroEnabled: formData.freeIntroEnabled,
+      bio: formData.bio?.substring(0, 50) + "...",
+    });
+
     // If there are sub-questions in this step, handle them first
     if (stepQuestions.length > 0 && !isLastQuestionInStep) {
+      console.log("Moving to next question in step", currentStep);
       setQuestionIndex(questionIndex + 1);
       return;
     }
 
     try {
       // Save data before navigation
+      console.log("Attempting to save data for step", currentStep);
       try {
         await saveData();
-        console.log("Data saved successfully for step", currentStep);
+        console.log("✅ Data saved successfully for step", currentStep);
       } catch (saveError: any) {
-        console.error("Error saving data:", saveError);
+        console.error("❌ Error saving data:", saveError);
+        console.error("Save error details:", {
+          message: saveError.message,
+          stack: saveError.stack,
+          name: saveError.name,
+        });
         // For step 1, we can continue even if save fails
         if (currentStep > 1) {
           // Don't throw - allow navigation to continue
-          console.warn("Save failed but continuing navigation");
+          console.warn("⚠️ Save failed but continuing navigation");
         }
       }
       
@@ -276,49 +354,92 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
       // Navigate to next step
       if (currentStep < totalSteps) {
         const nextStep = currentStep + 1;
-        console.log("Navigating to step", nextStep);
+        console.log("➡️ Navigating to step", nextStep);
+        console.log("Navigation path:", `/onboarding/coach/${nextStep}`);
         router.push(`/onboarding/coach/${nextStep}`);
       } else {
         // After last step (step 6), complete onboarding
-        console.log("Onboarding complete, checking payment setup");
+        console.log("🎉 Onboarding complete! Current step is", currentStep, "of", totalSteps);
+        console.log("Starting completion process...");
+        
         try {
+          console.log("Updating user data: setting onboardingCompleted = true");
+          console.log("User ID:", userId);
+          
           await updateUserData(userId, { onboardingCompleted: true });
+          console.log("✅ User data updated successfully");
           
           // Check if Stripe Connect is set up
+          console.log("Checking Stripe Connect status...");
           const stripeStatus = await checkStripeConnectStatus(userId);
+          console.log("Stripe status:", stripeStatus);
+          
           const canReceivePayments = stripeStatus.status === "active" && stripeStatus.chargesEnabled && stripeStatus.payoutsEnabled;
+          console.log("Can receive payments:", canReceivePayments);
           
           if (!canReceivePayments) {
             // Redirect to payment setup page
-            console.log("Payment setup not complete, redirecting to Stripe onboarding");
+            console.log("💳 Payment setup not complete, redirecting to Stripe onboarding");
+            console.log("Redirect path: /app/coach/onboarding/stripe?from=onboarding");
             router.push("/app/coach/onboarding/stripe?from=onboarding");
           } else {
             // Redirect to dashboard
+            console.log("✅ Payment setup complete, redirecting to dashboard");
+            console.log("Redirect path: /app/coach/dashboard");
             router.push("/app/coach/dashboard");
           }
-        } catch (updateError) {
-          console.error("Error updating user data:", updateError);
+        } catch (updateError: any) {
+          console.error("❌ Error updating user data:", updateError);
+          console.error("Update error details:", {
+            message: updateError.message,
+            stack: updateError.stack,
+            name: updateError.name,
+          });
+          
           // Check Stripe status even if update fails
           try {
+            console.log("Attempting Stripe check after update error...");
             const stripeStatus = await checkStripeConnectStatus(userId);
+            console.log("Stripe status (after error):", stripeStatus);
+            
             const canReceivePayments = stripeStatus.status === "active" && stripeStatus.chargesEnabled && stripeStatus.payoutsEnabled;
+            console.log("Can receive payments (after error):", canReceivePayments);
             
             if (!canReceivePayments) {
+              console.log("Redirecting to Stripe onboarding (after error)");
               router.push("/app/coach/onboarding/stripe?from=onboarding");
             } else {
+              console.log("Redirecting to dashboard (after error)");
               router.push("/app/coach/dashboard");
             }
-          } catch (stripeError) {
+          } catch (stripeError: any) {
+            console.error("❌ Stripe check failed:", stripeError);
+            console.error("Stripe error details:", {
+              message: stripeError.message,
+              stack: stripeError.stack,
+              name: stripeError.name,
+            });
             // Fallback to dashboard if Stripe check fails
+            console.log("⚠️ Fallback: Redirecting to dashboard");
             router.push("/app/coach/dashboard");
           }
         }
       }
-    } catch (error) {
-      console.error("Error in handleNext:", error);
+    } catch (error: any) {
+      console.error("❌❌❌ Fatal error in handleNext:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        currentStep,
+        totalSteps,
+        questionIndex,
+      });
       // Show user-friendly error message
-      alert("There was an error. Please try again.");
+      alert(`There was an error: ${error.message || "Unknown error"}. Please check the console for details.`);
     }
+    
+    console.log("=== handleNext completed ===");
   };
 
   const handleBack = () => {
@@ -335,50 +456,81 @@ export function CoachOnboarding({ currentStep, userId, isPreSignup = false }: Co
   };
 
   const canGoNext = () => {
+    console.log("🔍 canGoNext check:", {
+      currentStep,
+      questionIndex,
+      currentQuestionKey: currentQuestion?.key,
+      currentQuestionRequired: currentQuestion?.required,
+    });
+
     // Check if current question is answered
     if (currentQuestion) {
       if (currentQuestion.required) {
+        let canProceed = false;
         switch (currentQuestion.key) {
           case "firstName":
-            return formData.firstName.trim() !== "";
+            canProceed = formData.firstName.trim() !== "";
+            break;
           case "lastName":
-            return formData.lastName.trim() !== "";
+            canProceed = formData.lastName.trim() !== "";
+            break;
           case "headline":
-            return formData.headline.trim() !== "";
+            canProceed = formData.headline.trim() !== "";
+            break;
           case "introVideo":
           case "coachingPhilosophy":
           case "freeIntro":
-            return true; // Optional
+            canProceed = true; // Optional
+            break;
           case "bio":
-            return formData.bio.trim() !== "";
+            canProceed = formData.bio.trim() !== "";
+            break;
           case "price30Min":
-            return formData.price30Min > 0;
+            canProceed = formData.price30Min > 0;
+            break;
           case "price60Min":
-            return formData.price60Min > 0;
+            canProceed = formData.price60Min > 0;
+            break;
           default:
-            return true;
+            canProceed = true;
         }
+        console.log(`canGoNext result for ${currentQuestion.key}:`, canProceed);
+        return canProceed;
       }
       return true;
     }
 
     // Fallback to original logic
+    let canProceed = false;
     switch (currentStep) {
       case 1:
-        return true;
+        canProceed = true;
+        break;
       case 2:
-        return formData.firstName !== "" && formData.lastName !== "" && formData.headline !== "";
+        canProceed = formData.firstName !== "" && formData.lastName !== "" && formData.headline !== "";
+        break;
       case 3:
-        return formData.sports.length > 0;
+        canProceed = formData.sports.length > 0;
+        break;
       case 4:
-        return formData.experienceType !== "";
+        canProceed = formData.experienceType !== "";
+        break;
       case 5:
-        return formData.bio !== "";
+        canProceed = formData.bio !== "";
+        break;
       case 6:
-        return formData.price30Min > 0 && formData.price60Min > 0;
+        canProceed = formData.price30Min > 0 && formData.price60Min > 0;
+        console.log("Step 6 canGoNext check:", {
+          price30Min: formData.price30Min,
+          price60Min: formData.price60Min,
+          canProceed,
+        });
+        break;
       default:
-        return false;
+        canProceed = false;
     }
+    console.log(`canGoNext result for step ${currentStep}:`, canProceed);
+    return canProceed;
   };
 
   const renderStep = () => {

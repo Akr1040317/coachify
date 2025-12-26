@@ -66,8 +66,22 @@ export function WizardStepShell({
               <button
                 onClick={(e) => {
                   e.preventDefault();
+                  console.log("🖱️ WizardStepShell Next/Complete button clicked!");
+                  console.log("Button state:", {
+                    currentStep,
+                    totalSteps,
+                    canGoNext,
+                    hasOnNext: !!onNext,
+                    buttonText: currentStep === totalSteps ? "Complete" : "Next",
+                  });
                   if (onNext && canGoNext) {
+                    console.log("Calling onNext handler from WizardStepShell...");
                     onNext();
+                  } else {
+                    console.warn("⚠️ WizardStepShell button clicked but blocked:", {
+                      hasOnNext: !!onNext,
+                      canGoNext,
+                    });
                   }
                 }}
                 disabled={!canGoNext || !onNext}
@@ -91,4 +105,5 @@ export function WizardStepShell({
     </div>
   );
 }
+
 
