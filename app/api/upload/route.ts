@@ -73,11 +73,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get Firebase Storage bucket - explicitly specify bucket name
+    // Get Firebase Storage bucket
     console.log("📦 Getting Firebase Storage bucket...");
     const storage = getStorage(adminApp);
-    const bucket = storage.bucket("coachify-21435.firebasestorage.app");
-    console.log("✅ Bucket retrieved:", bucket.name);
+    
+    // Use default bucket from app config (storageBucket is set in admin.ts)
+    // If that doesn't work, Firebase Admin SDK will use the project's default bucket
+    let bucket = storage.bucket();
+    console.log("✅ Bucket reference created:", bucket.name || "default");
     
     // Convert File to Buffer
     console.log("📄 Converting file to buffer...", { fileName: file.name, fileSize: file.size, fileType: file.type });
@@ -87,17 +90,48 @@ export async function POST(request: NextRequest) {
 
     // Upload file
     console.log("⬆️ Uploading file to path:", path);
-    const fileRef = bucket.file(path);
-    await fileRef.save(buffer, {
-      metadata: {
-        contentType: file.type,
+    console.log("Using bucket:", bucket.name);
+    
+    let fileRef;
+    try {
+      fileRef = bucket.file(path);
+      await fileRef.save(buffer, {
         metadata: {
-          uploadedBy: userId,
-          uploadedAt: new Date().toISOString(),
+          contentType: file.type,
+          metadata: {
+            uploadedBy: userId,
+            uploadedAt: new Date().toISOString(),
+          },
         },
-      },
-    });
-    console.log("✅ File uploaded successfully");
+      });
+      console.log("✅ File uploaded successfully");
+    } catch (uploadError: any) {
+      // If bucket doesn't exist error, try alternative bucket names
+      if (uploadError.code === 404 || uploadError.message?.includes("does not exist")) {
+        console.warn("⚠️ Bucket not found, trying alternative bucket names...");
+        
+        // Try with project ID format
+        bucket = storage.bucket("coachify-21435");
+        try {
+          fileRef = bucket.file(path);
+          await fileRef.save(buffer, {
+            metadata: {
+              contentType: file.type,
+              metadata: {
+                uploadedBy: userId,
+                uploadedAt: new Date().toISOString(),
+              },
+            },
+          });
+          console.log("✅ File uploaded successfully with alternative bucket:", bucket.name);
+        } catch (altError: any) {
+          console.error("❌ Alternative bucket also failed:", altError);
+          throw new Error(`Bucket access failed. Original error: ${uploadError.message}. Alternative error: ${altError.message}`);
+        }
+      } else {
+        throw uploadError;
+      }
+    }
 
     // Determine if file should be public (intro videos, avatars, etc. are public)
     const isPublicFile = path.includes("intro-video") || 
