@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getCoachDataAdmin } from "@/lib/firebase/firestore-admin";
+import { getStripeSecretKey } from "@/lib/config/stripe";
 
 // Initialize Stripe with error handling
 function getStripe(): Stripe | null {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const secretKey = getStripeSecretKey();
   if (!secretKey) {
-    console.error("STRIPE_SECRET_KEY is not set in environment variables");
+    console.error("Stripe secret key is not set in environment variables");
     return null;
   }
   try {
@@ -209,4 +210,5 @@ export async function GET(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
 

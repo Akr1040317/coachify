@@ -1,8 +1,9 @@
 import Stripe from "stripe";
 import { getCoachData } from "./firestore";
 import { calculatePlatformFee, calculateCoachEarnings } from "@/lib/config/payments";
+import { getStripeSecretKey } from "@/lib/config/stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+const stripe = new Stripe(getStripeSecretKey(), {
   apiVersion: "2023-10-16",
 });
 
@@ -146,4 +147,5 @@ export async function createConnectCheckoutSession(params: {
 
   return session;
 }
+
 

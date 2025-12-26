@@ -12,12 +12,13 @@ import {
 } from "@/lib/firebase/firestore";
 import { Timestamp, where } from "firebase/firestore";
 import { addToPendingPayout, updatePayoutStatus } from "@/lib/firebase/payouts";
+import { getStripeSecretKey, getStripeWebhookSecret } from "@/lib/config/stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+const stripe = new Stripe(getStripeSecretKey(), {
   apiVersion: "2023-10-16",
 });
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
+const webhookSecret = getStripeWebhookSecret();
 
 export async function POST(request: NextRequest) {
   const body = await request.text();

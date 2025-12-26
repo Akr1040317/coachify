@@ -3,11 +3,12 @@ import Stripe from "stripe";
 import { getPurchases, getCoachData } from "@/lib/firebase/firestore";
 import { where } from "firebase/firestore";
 import { getUserData } from "@/lib/firebase/firestore";
+import { getStripeSecretKey } from "@/lib/config/stripe";
 
 function getStripe() {
-  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const secretKey = getStripeSecretKey();
   if (!secretKey) {
-    throw new Error("STRIPE_SECRET_KEY is not set in environment variables");
+    throw new Error("Stripe secret key is not configured. Please set STRIPE_SECRET_KEY_TEST/LIVE or STRIPE_SECRET_KEY environment variables.");
   }
   return new Stripe(secretKey, {
     apiVersion: "2023-10-16",
@@ -186,3 +187,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

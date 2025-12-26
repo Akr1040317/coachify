@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getUserData, getPurchase, updatePurchase, getPendingPayout, updatePendingPayout } from "@/lib/firebase/firestore";
 import { PLATFORM_FEE_PERCENTAGE } from "@/lib/config/payments";
+import { getStripeSecretKey } from "@/lib/config/stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+const stripe = new Stripe(getStripeSecretKey(), {
   apiVersion: "2023-10-16",
 });
 
@@ -88,4 +89,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
 

@@ -7,13 +7,30 @@ Create a `.env.local` file in the root directory with the following variables:
 ```env
 # Stripe Configuration (Required for payments)
 # These are SECRET keys - never commit these to git!
+
+# Mode: "test" or "live" (defaults to "test" for safety)
+STRIPE_MODE=test
+
+# Test Mode Keys (for testing)
+STRIPE_SECRET_KEY_TEST=sk_test_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST=pk_test_...
+STRIPE_WEBHOOK_SECRET_TEST=whsec_...
+
+# Live Mode Keys (for production - optional for local dev)
+STRIPE_SECRET_KEY_LIVE=sk_live_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE=pk_live_...
+STRIPE_WEBHOOK_SECRET_LIVE=whsec_...
+
+# Fallback (optional - for backward compatibility)
 STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 
 # App Configuration
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ```
+
+**📖 For detailed setup instructions for test/live modes, see [STRIPE_TEST_LIVE_SETUP.md](./STRIPE_TEST_LIVE_SETUP.md)**
 
 **Note**: Firebase configuration is hardcoded in `lib/firebase/config.ts`. Firebase client config values (apiKey, projectId, etc.) are safe to expose publicly - security is handled by Firebase Security Rules and domain restrictions in the Firebase Console.
 
@@ -29,9 +46,10 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
    - **For production**: Go to Stripe Dashboard > Developers > Webhooks
    - Add endpoint: `https://yourdomain.com/api/webhooks/stripe`
    - Select events: `checkout.session.completed`, `payment_intent.succeeded`, `transfer.updated`, `account.updated`
-   - Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET`
+   - Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET_TEST` (or `STRIPE_WEBHOOK_SECRET`)
 
-**📖 For complete testing instructions, see [TESTING_GUIDE.md](./TESTING_GUIDE.md)**
+**📖 For complete testing instructions, see [TESTING_GUIDE.md](./TESTING_GUIDE.md)**  
+**📖 For test/live mode setup in Vercel, see [STRIPE_TEST_LIVE_SETUP.md](./STRIPE_TEST_LIVE_SETUP.md)**
 
 ## Firebase Setup
 
