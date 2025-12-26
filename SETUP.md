@@ -20,12 +20,18 @@ NEXT_PUBLIC_BASE_URL=http://localhost:3000
 ## Stripe Setup
 
 1. Create a Stripe account at https://stripe.com
-2. Get your API keys from the Stripe Dashboard
-3. Set up webhooks:
-   - Go to Stripe Dashboard > Developers > Webhooks
+2. **Switch to Test Mode** (for testing - toggle in top right of Stripe Dashboard)
+3. Get your API keys from the Stripe Dashboard:
+   - Go to Developers > API keys
+   - Copy the **test** keys (start with `pk_test_` and `sk_test_`)
+4. Set up webhooks:
+   - **For local testing**: Use Stripe CLI (see [TESTING_GUIDE.md](./TESTING_GUIDE.md))
+   - **For production**: Go to Stripe Dashboard > Developers > Webhooks
    - Add endpoint: `https://yourdomain.com/api/webhooks/stripe`
-   - Select events: `checkout.session.completed`
+   - Select events: `checkout.session.completed`, `payment_intent.succeeded`, `transfer.updated`, `account.updated`
    - Copy the webhook signing secret to `STRIPE_WEBHOOK_SECRET`
+
+**📖 For complete testing instructions, see [TESTING_GUIDE.md](./TESTING_GUIDE.md)**
 
 ## Firebase Setup
 
@@ -117,4 +123,5 @@ vercel
 8. Set up error monitoring (Sentry, etc.)
 9. Add unit and integration tests
 10. Implement caching strategies
+
 

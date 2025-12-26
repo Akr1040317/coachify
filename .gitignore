@@ -28,9 +28,13 @@ yarn-error.log*
 .env*.local
 .env
 
+# sensitive keys (for local reference only)
+STRIPE_KEYS.txt
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+

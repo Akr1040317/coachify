@@ -4,19 +4,22 @@
 
 Add these environment variables in your Vercel project settings:
 
-### Stripe Configuration
+### Stripe Configuration (Test Mode)
 
 ```
-STRIPE_SECRET_KEY=sk_test_... (or sk_live_... for production)
-STRIPE_WEBHOOK_SECRET=whsec_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_... (or pk_live_... for production)
+STRIPE_SECRET_KEY=sk_test_YOUR_SECRET_KEY_HERE
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_PUBLISHABLE_KEY_HERE
+STRIPE_WEBHOOK_SECRET=whsec_... (get from Stripe Dashboard after creating webhook)
 ```
+
+**Get your keys from:** Stripe Dashboard → Developers → API keys (make sure you're in Test Mode)
 
 ### App Configuration
 
 ```
-NEXT_PUBLIC_BASE_URL=https://your-domain.vercel.app
+NEXT_PUBLIC_BASE_URL=https://coachify-ed.vercel.app
 ```
+(Replace with your actual Vercel domain if different)
 
 ## How to Add in Vercel
 
@@ -43,4 +46,5 @@ After adding environment variables, trigger a new deployment:
 - Go to **Deployments** tab
 - Click **Redeploy** on the latest deployment
 - Or push a new commit to trigger automatic deployment
+
 

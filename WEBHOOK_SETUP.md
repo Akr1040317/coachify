@@ -22,7 +22,7 @@ Webhooks are **essential** for your payment system to work correctly. They allow
    ```
    https://coachify-ed.vercel.app/api/webhooks/stripe
    ```
-   (Replace with your actual production domain)
+   ⚠️ **Replace `coachify-ed.vercel.app` with your actual Vercel domain if different**
 
 ### Step 2: Configure Events Source
 
@@ -172,3 +172,4 @@ After setting up webhooks:
 4. ✅ Monitor webhook logs for any errors
 
 Your payment system is now fully configured! 🎉
+

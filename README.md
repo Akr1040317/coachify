@@ -77,27 +77,34 @@ A dark-themed, sports coaching marketplace where students discover verified coac
 
 ## Getting Started
 
+### 🚀 Quick Start for Vercel Testing
+
+**Want to test on Vercel?** → See **[README_VERCEL.md](./README_VERCEL.md)** for the fastest setup!
+
+### Local Development
+
 1. Install dependencies:
 ```bash
 npm install
 ```
 
 2. Set up environment variables (create `.env.local`):
-```bash
-cp .env.example .env.local
-```
+   - See [SETUP.md](./SETUP.md) for required environment variables
+   - Stripe keys are required for payment processing
+   - Set `NEXT_PUBLIC_BASE_URL` to your production URL for webhooks
 
-Then fill in your Firebase and Stripe credentials:
-- Firebase config is already set in `lib/firebase/config.ts` (you can move to env vars for production)
-- Stripe keys are required for payment processing
-- Set `NEXT_PUBLIC_BASE_URL` to your production URL for webhooks
+3. **For testing payments**: See [TESTING_GUIDE.md](./TESTING_GUIDE.md) for complete testing instructions including:
+   - How to set up Stripe test mode
+   - How to test the complete payment flow
+   - How to verify platform fees (20%)
+   - Stripe test cards reference
 
-3. Run the development server:
+4. Run the development server:
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000)
+5. Open [http://localhost:3000](http://localhost:3000)
 
 ## Features Implemented
 
@@ -195,3 +202,4 @@ See the product spec for detailed Firestore collection schemas. Key collections:
 4. Add content management features
 5. Implement progress tracking
 6. Build admin panel
+
