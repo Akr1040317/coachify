@@ -58,10 +58,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         error: "Failed to fetch coach data",
         code: "DATABASE_ERROR",
-        details: process.env.NODE_ENV === "development" ? {
+        details: {
           message: dbError.message,
-          stack: dbError.stack
-        } : undefined
+          ...(process.env.NODE_ENV === "development" ? {
+            stack: dbError.stack
+          } : {})
+        }
       }, { status: 500 });
     }
     if (!coach) {
@@ -102,6 +104,7 @@ export async function POST(request: NextRequest) {
       console.error("Error message:", stripeError.message);
       console.error("Account ID:", coach.stripeConnectAccountId);
       
+      // Always return error details for debugging
       return NextResponse.json({ 
         error: "Failed to generate onboarding link",
         code: "STRIPE_ACCOUNT_LINK_ERROR",
@@ -111,8 +114,8 @@ export async function POST(request: NextRequest) {
           stripeErrorCode: stripeError.code,
           accountId: coach.stripeConnectAccountId,
           baseUrl,
+          fullError: stripeError.toString(),
           ...(process.env.NODE_ENV === "development" ? {
-            fullError: stripeError.toString(),
             stack: stripeError.stack
           } : {})
         }
