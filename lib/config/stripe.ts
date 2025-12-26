@@ -6,7 +6,8 @@
  * Defaults to test mode for safety
  */
 
-const STRIPE_MODE = (process.env.STRIPE_MODE || "test").toLowerCase();
+// Trim whitespace and newlines from environment variables
+const STRIPE_MODE = (process.env.STRIPE_MODE || "test").trim().toLowerCase();
 
 // Determine which keys to use based on mode
 const isTestMode = STRIPE_MODE === "test";
@@ -14,13 +15,13 @@ const isTestMode = STRIPE_MODE === "test";
 // Get the appropriate keys based on mode
 export const getStripeSecretKey = (): string => {
   if (isTestMode) {
-    const key = process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY || "";
+    const key = (process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY || "").trim();
     if (!key) {
       console.error("⚠️ STRIPE_SECRET_KEY_TEST not found. Mode:", STRIPE_MODE, "isTestMode:", isTestMode);
     }
     return key;
   } else {
-    const key = process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY || "";
+    const key = (process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY || "").trim();
     if (!key) {
       console.error("⚠️ STRIPE_SECRET_KEY_LIVE not found. Mode:", STRIPE_MODE, "isTestMode:", isTestMode);
     }
@@ -30,17 +31,17 @@ export const getStripeSecretKey = (): string => {
 
 export const getStripePublishableKey = (): string => {
   if (isTestMode) {
-    return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+    return (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "").trim();
   } else {
-    return process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+    return (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "").trim();
   }
 };
 
 export const getStripeWebhookSecret = (): string => {
   if (isTestMode) {
-    return process.env.STRIPE_WEBHOOK_SECRET_TEST || process.env.STRIPE_WEBHOOK_SECRET || "";
+    return (process.env.STRIPE_WEBHOOK_SECRET_TEST || process.env.STRIPE_WEBHOOK_SECRET || "").trim();
   } else {
-    return process.env.STRIPE_WEBHOOK_SECRET_LIVE || process.env.STRIPE_WEBHOOK_SECRET || "";
+    return (process.env.STRIPE_WEBHOOK_SECRET_LIVE || process.env.STRIPE_WEBHOOK_SECRET || "").trim();
   }
 };
 
