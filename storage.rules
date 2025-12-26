@@ -1,0 +1,57 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is the owner (coachId matches authenticated user)
+    function isCoachOwner(coachId) {
+      return isAuthenticated() && request.auth.uid == coachId;
+    }
+    
+    // Courses directory - coaches can upload/manage their own course files
+    match /courses/{coachId}/{courseId}/{allPaths=**} {
+      // Coaches can read/write their own course files
+      allow read, write: if isCoachOwner(coachId);
+      
+      // Public read access for published courses (thumbnail, etc.)
+      // Note: This requires checking Firestore, which Storage rules can do
+      allow read: if true; // Allow public read for now - you can restrict this later
+    }
+    
+    // Videos directory - coaches can upload/manage their own videos
+    match /videos/{coachId}/{allPaths=**} {
+      // Coaches can read/write their own videos
+      allow read, write: if isCoachOwner(coachId);
+      
+      // Public read access for public videos
+      allow read: if true; // Allow public read for now
+    }
+    
+    // Articles directory - coaches can upload/manage their own article covers
+    match /articles/{coachId}/{articleId}/{allPaths=**} {
+      // Coaches can read/write their own article files
+      allow read, write: if isCoachOwner(coachId);
+      
+      // Public read access for published articles
+      allow read: if true; // Allow public read for now
+    }
+    
+    // Profile images directory
+    match /profiles/{userId}/{allPaths=**} {
+      // Users can read/write their own profile images
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+      
+      // Public read access for profile images
+      allow read: if true;
+    }
+    
+    // Default: deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
