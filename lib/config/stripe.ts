@@ -14,9 +14,17 @@ const isTestMode = STRIPE_MODE === "test";
 // Get the appropriate keys based on mode
 export const getStripeSecretKey = (): string => {
   if (isTestMode) {
-    return process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY || "";
+    const key = process.env.STRIPE_SECRET_KEY_TEST || process.env.STRIPE_SECRET_KEY || "";
+    if (!key) {
+      console.error("⚠️ STRIPE_SECRET_KEY_TEST not found. Mode:", STRIPE_MODE, "isTestMode:", isTestMode);
+    }
+    return key;
   } else {
-    return process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY || "";
+    const key = process.env.STRIPE_SECRET_KEY_LIVE || process.env.STRIPE_SECRET_KEY || "";
+    if (!key) {
+      console.error("⚠️ STRIPE_SECRET_KEY_LIVE not found. Mode:", STRIPE_MODE, "isTestMode:", isTestMode);
+    }
+    return key;
   }
 };
 

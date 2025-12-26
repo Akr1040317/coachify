@@ -24,9 +24,25 @@ export async function POST(request: NextRequest) {
   try {
     const stripe = getStripe();
     if (!stripe) {
+      const secretKey = getStripeSecretKey();
+      const mode = process.env.STRIPE_MODE || "test";
       return NextResponse.json({ 
         error: "Stripe is not configured. Please set Stripe secret key environment variables.",
-        code: "STRIPE_NOT_CONFIGURED"
+        code: "STRIPE_NOT_CONFIGURED",
+        details: process.env.NODE_ENV === "development" ? {
+          mode,
+          hasSecretKey: !!secretKey,
+          secretKeyLength: secretKey?.length || 0,
+          envVars: {
+            STRIPE_MODE: process.env.STRIPE_MODE,
+            hasSTRIPE_SECRET_KEY_TEST: !!process.env.STRIPE_SECRET_KEY_TEST,
+            hasSTRIPE_SECRET_KEY_LIVE: !!process.env.STRIPE_SECRET_KEY_LIVE,
+            hasSTRIPE_SECRET_KEY: !!process.env.STRIPE_SECRET_KEY,
+          }
+        } : {
+          mode,
+          message: "Check Vercel environment variables and redeploy"
+        }
       }, { status: 500 });
     }
 

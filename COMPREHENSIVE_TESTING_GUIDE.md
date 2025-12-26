@@ -1,4 +1,4 @@
-# Comprehensive Testing Guide
+ # Comprehensive Testing Guide
 
 This guide provides step-by-step instructions for testing the entire payment flow, including student payments, coach payouts, and platform commission tracking.
 
