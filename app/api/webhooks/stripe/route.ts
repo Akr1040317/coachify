@@ -103,16 +103,23 @@ export async function POST(request: NextRequest) {
           // Confirm booking in Cal.com if it exists
           if (booking.calcomBookingId) {
             try {
-              const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calcom/confirm-booking`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  bookingId: metadata.bookingId,
-                  calcomBookingId: booking.calcomBookingId,
-                }),
-              });
-              if (!response.ok) {
-                console.error("Failed to confirm Cal.com booking:", await response.text());
+              // Convert calcomBookingId to number if it's a string
+              const calcomBookingIdNum = typeof booking.calcomBookingId === 'string' 
+                ? parseInt(booking.calcomBookingId, 10) 
+                : booking.calcomBookingId;
+              
+              if (!isNaN(calcomBookingIdNum)) {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calcom/confirm-booking`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    bookingId: metadata.bookingId,
+                    calcomBookingId: calcomBookingIdNum,
+                  }),
+                });
+                if (!response.ok) {
+                  console.error("Failed to confirm Cal.com booking:", await response.text());
+                }
               }
             } catch (error) {
               console.error("Error confirming Cal.com booking:", error);
