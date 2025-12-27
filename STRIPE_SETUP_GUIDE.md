@@ -180,3 +180,5 @@ If you encounter issues:
 3. Check Stripe Dashboard → **Developers** → **Logs** for API errors
 4. Verify all environment variables are set correctly
 
+
+

@@ -76,3 +76,5 @@ export GOOGLE_APPLICATION_CREDENTIALS="./serviceAccountKey.json"
 
 After setup, the API routes (`/api/coaches/stripe-connect/setup` and `/api/coaches/stripe-connect/onboarding`) should work without "Missing or insufficient permissions" errors.
 
+
+

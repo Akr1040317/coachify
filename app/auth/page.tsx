@@ -59,37 +59,43 @@ function AuthPageContent() {
   // Handle Google OAuth redirect callback
   useEffect(() => {
     const checkRedirectResult = async () => {
-      // Check if we're returning from a redirect (URL might have auth params)
+      // Check if we're returning from a redirect more precisely
+      // Only check for Firebase auth handler in URL or actual OAuth params
       const urlParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const hasAuthParams = urlParams.has('code') || urlParams.has('state') || 
-                           hashParams.has('code') || hashParams.has('state') ||
-                           window.location.href.includes('__/auth/handler');
+      const isFirebaseHandler = window.location.href.includes('__/auth/handler');
+      const hasOAuthParams = (urlParams.has('code') && urlParams.has('state')) || 
+                            (hashParams.has('code') && hashParams.has('state'));
+      const hasAuthParams = isFirebaseHandler || hasOAuthParams;
       
       if (hasAuthParams) {
         setLoading(true);
       }
       
       try {
-        // Add timeout for redirect handling (increased for production)
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('REDIRECT_TIMEOUT')), 15000)
+        // Call getRedirectResult immediately - it's safe to call even if no redirect happened
+        // Reduce timeout to 10 seconds (more reasonable)
+        const timeoutPromise = new Promise<null>((_, reject) => 
+          setTimeout(() => reject(new Error('REDIRECT_TIMEOUT')), 10000)
         );
         
         const redirectPromise = handleGoogleRedirect();
-        const user = await Promise.race([redirectPromise, timeoutPromise]) as Awaited<ReturnType<typeof handleGoogleRedirect>>;
+        const user = await Promise.race([redirectPromise, timeoutPromise]);
         
         if (user) {
-          // User returned from redirect, onAuthChange will handle the rest
+          // User returned from redirect successfully
           // Clear URL params after processing to prevent re-processing
-          window.history.replaceState({}, '', window.location.pathname);
-          // Keep loading state - onAuthChange will redirect
+          if (hasAuthParams) {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+          // Keep loading state - onAuthChange will handle redirect
           return;
         }
-        // No redirect result
+        
+        // No redirect result - this is normal if user didn't come from a redirect
         if (hasAuthParams) {
           // If we had auth params but no user, something went wrong
-          // Clear URL params
+          // Clear URL params to prevent infinite loops
           window.history.replaceState({}, '', window.location.pathname);
           setError("Failed to complete Google sign in. Please try again.");
           setLoading(false);
@@ -116,14 +122,21 @@ function AuthPageContent() {
           return;
         }
         
-        // Clear URL params on error
+        // Clear URL params on error to prevent re-processing
         if (hasAuthParams) {
           window.history.replaceState({}, '', window.location.pathname);
         }
-        if (error.message !== 'REDIRECT_INITIATED') {
-          setError("Failed to complete Google sign in. Please try again.");
-          setLoading(false);
+        
+        // Don't show error if redirect was just initiated (user is being redirected)
+        if (error.message === 'REDIRECT_INITIATED') {
+          // Keep loading state, user is being redirected
+          return;
         }
+        
+        // Show user-friendly error message
+        const errorMessage = error.message || error.code || "Failed to complete Google sign in. Please try again.";
+        setError(errorMessage);
+        setLoading(false);
       }
     };
     

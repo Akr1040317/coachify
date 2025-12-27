@@ -63,3 +63,5 @@ If you see "Missing or insufficient permissions" errors:
 3. Verify the user document exists in the `users` collection
 4. Check browser console for specific error details
 
+
+

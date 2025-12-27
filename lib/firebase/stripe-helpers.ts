@@ -125,3 +125,5 @@ export async function isStripeSetupComplete(coachId: string): Promise<boolean> {
   return await canCoachReceivePayments(coachId);
 }
 
+
+

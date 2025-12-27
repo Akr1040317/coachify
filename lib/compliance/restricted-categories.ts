@@ -195,3 +195,5 @@ export function getCategoryDescription(category: RestrictedCategory): string {
   return descriptions[category] || category;
 }
 
+
+

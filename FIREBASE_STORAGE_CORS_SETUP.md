@@ -84,3 +84,5 @@ If you deploy to a new domain, update `firebase-storage-cors.json` and re-run th
 - Both solutions can work together - the app will try the API route first, then fall back to direct uploads
 
 
+
+

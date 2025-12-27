@@ -43,12 +43,9 @@ service cloud.firestore {
     
     // Coaches collection
     match /coaches/{coachId} {
-      // Public read access for active coaches OR verified coaches
-      allow read: if resource.data.status == "active" || resource.data.isVerified == true;
-      // Authenticated users can read coach data (for booking purposes)
-      allow read: if isAuthenticated();
-      // Coaches can read their own data
-      allow read: if isOwner(coachId);
+      // Public read access for all coaches (for profile pages)
+      // This allows unauthenticated users to view coach profiles
+      allow read: if true;
       // Coaches can create their own data
       allow create: if isAuthenticated() && isOwner(coachId);
       // Coaches can update their own data (including customOfferings)
