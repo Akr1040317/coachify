@@ -302,62 +302,67 @@ function NewBookingPageContent() {
         <GradientCard>
           <h3 className="text-xl font-bold mb-4">Session Type</h3>
           <div className="space-y-3 mb-6">
-            {coach.sessionOffers?.freeIntroEnabled && (
-              <button
-                onClick={() => setSelectedType("free_intro")}
-                className={`
-                  w-full p-4 rounded-lg border-2 text-left transition-all
-                  ${selectedType === "free_intro"
-                    ? "border-blue-500 bg-blue-500/10"
-                    : "border-gray-600 hover:border-gray-500"
-                  }
-                `}
-              >
-                <div className="font-semibold">Free Intro Consultation</div>
-                <div className="text-sm text-gray-400">{coach.sessionOffers.freeIntroMinutes} minutes</div>
-              </button>
+            {/* Only show default offers if no offeringId was provided */}
+            {!offeringId && (
+              <>
+                {coach.sessionOffers?.freeIntroEnabled && (
+                  <button
+                    onClick={() => setSelectedType("free_intro")}
+                    className={`
+                      w-full p-4 rounded-lg border-2 text-left transition-all
+                      ${selectedType === "free_intro"
+                        ? "border-blue-500 bg-blue-500/10"
+                        : "border-gray-600 hover:border-gray-500"
+                      }
+                    `}
+                  >
+                    <div className="font-semibold">Free Intro Consultation</div>
+                    <div className="text-sm text-gray-400">{coach.sessionOffers.freeIntroMinutes} minutes</div>
+                  </button>
+                )}
+                {price30 > 0 && (
+                  <button
+                    onClick={() => {
+                      setSelectedType("paid");
+                      setSelectedMinutes(30);
+                    }}
+                    className={`
+                      w-full p-4 rounded-lg border-2 text-left transition-all
+                      ${selectedType === "paid" && selectedMinutes === 30
+                        ? "border-blue-500 bg-blue-500/10"
+                        : "border-gray-600 hover:border-gray-500"
+                      }
+                    `}
+                  >
+                    <div className="font-semibold">30-minute Session</div>
+                    <div className="text-sm text-gray-400">${price30}</div>
+                  </button>
+                )}
+                {price60 > 0 && (
+                  <button
+                    onClick={() => {
+                      setSelectedType("paid");
+                      setSelectedMinutes(60);
+                      setSelectedCustomOffering(null);
+                    }}
+                    className={`
+                      w-full p-4 rounded-lg border-2 text-left transition-all
+                      ${selectedType === "paid" && selectedMinutes === 60 && !selectedCustomOffering
+                        ? "border-blue-500 bg-blue-500/10"
+                        : "border-gray-600 hover:border-gray-500"
+                      }
+                    `}
+                  >
+                    <div className="font-semibold">60-minute Session</div>
+                    <div className="text-sm text-gray-400">${price60}</div>
+                  </button>
+                )}
+              </>
             )}
-            {price30 > 0 && (
-              <button
-                onClick={() => {
-                  setSelectedType("paid");
-                  setSelectedMinutes(30);
-                }}
-                className={`
-                  w-full p-4 rounded-lg border-2 text-left transition-all
-                  ${selectedType === "paid" && selectedMinutes === 30
-                    ? "border-blue-500 bg-blue-500/10"
-                    : "border-gray-600 hover:border-gray-500"
-                  }
-                `}
-              >
-                <div className="font-semibold">30-minute Session</div>
-                <div className="text-sm text-gray-400">${price30}</div>
-              </button>
-            )}
-            {price60 > 0 && (
-              <button
-                onClick={() => {
-                  setSelectedType("paid");
-                  setSelectedMinutes(60);
-                  setSelectedCustomOffering(null);
-                }}
-                className={`
-                  w-full p-4 rounded-lg border-2 text-left transition-all
-                  ${selectedType === "paid" && selectedMinutes === 60 && !selectedCustomOffering
-                    ? "border-blue-500 bg-blue-500/10"
-                    : "border-gray-600 hover:border-gray-500"
-                  }
-                `}
-              >
-                <div className="font-semibold">60-minute Session</div>
-                <div className="text-sm text-gray-400">${price60}</div>
-              </button>
-            )}
-            {/* Custom Offerings */}
+            {/* Custom Offerings - always show coach-created offerings */}
             {coach.customOfferings && coach.customOfferings.filter((o: any) => o.isActive && !o.isFree).length > 0 && (
               <>
-                <div className="text-sm text-gray-400 mt-4 mb-2">Custom Offerings</div>
+                {!offeringId && <div className="text-sm text-gray-400 mt-4 mb-2">Custom Offerings</div>}
                 {coach.customOfferings
                   .filter((o: any) => o.isActive && !o.isFree)
                   .map((offering: any) => (

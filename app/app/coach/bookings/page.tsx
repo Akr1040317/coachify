@@ -172,12 +172,40 @@ export default function CoachBookingsPage() {
     }
   };
 
+  const handleConfirmBooking = async (bookingId: string) => {
+    if (!user) return;
+    try {
+      await updateBooking(bookingId, { status: "confirmed" });
+      await loadBookings(user.uid);
+      alert("Booking confirmed successfully");
+    } catch (error) {
+      console.error("Error confirming booking:", error);
+      alert("Failed to confirm booking");
+    }
+  };
+
+  const handleRejectBooking = async (bookingId: string) => {
+    if (!user) return;
+    try {
+      await updateBooking(bookingId, { 
+        status: "cancelled",
+        cancelledBy: "coach",
+        cancellationReason: "Rejected by coach"
+      });
+      await loadBookings(user.uid);
+      alert("Booking rejected");
+    } catch (error) {
+      console.error("Error rejecting booking:", error);
+      alert("Failed to reject booking");
+    }
+  };
+
   const getFilteredBookings = () => {
     const now = new Date();
     switch (filterStatus) {
       case "upcoming":
         return bookings.filter(
-          (b) => b.status === "confirmed" && b.scheduledStart.toDate() > now
+          (b) => (b.status === "confirmed" || b.status === "requested") && b.scheduledStart.toDate() > now
         );
       case "past":
         return bookings.filter(
@@ -189,6 +217,14 @@ export default function CoachBookingsPage() {
         return bookings;
     }
   };
+
+  // Separate requested bookings for display
+  const requestedBookings = bookings.filter(
+    (b) => b.status === "requested" && b.scheduledStart.toDate() > new Date()
+  );
+  const confirmedBookings = bookings.filter(
+    (b) => b.status === "confirmed" && b.scheduledStart.toDate() > new Date()
+  );
 
   const filteredBookings = getFilteredBookings();
 
@@ -230,14 +266,122 @@ export default function CoachBookingsPage() {
       );
     }
 
-    return (
-      <div className="space-y-4">
-        {filteredBookings.map((booking) => {
-          const bookingDate = booking.scheduledStart.toDate();
-          const isUpcoming = bookingDate > new Date() && booking.status === "confirmed";
-          const isPast = bookingDate < new Date() || booking.status === "completed" || booking.status === "cancelled";
+    // Separate requested and confirmed bookings
+    const requestedBookingsList = filteredBookings.filter(b => b.status === "requested" && b.scheduledStart.toDate() > new Date());
+    const otherBookings = filteredBookings.filter(b => b.status !== "requested" || b.scheduledStart.toDate() <= new Date());
 
-          return (
+    return (
+      <div className="space-y-6">
+        {/* Booking Requests Section */}
+        {requestedBookingsList.length > 0 && (
+          <div>
+            <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+              <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-sm font-medium rounded-full border border-yellow-500/30">
+                {requestedBookingsList.length}
+              </span>
+              Booking Requests
+            </h2>
+            <div className="space-y-4 mb-6">
+              {requestedBookingsList.map((booking) => {
+                const bookingDate = booking.scheduledStart.toDate();
+                return (
+                  <GradientCard key={booking.id} className="p-6 border-2 border-yellow-500/30">
+                    <div className="flex items-start gap-6">
+                      {/* Student Avatar */}
+                      <div className="flex-shrink-0">
+                        {booking.studentPhotoURL ? (
+                          <img
+                            src={booking.studentPhotoURL}
+                            alt={booking.studentName}
+                            className="w-16 h-16 rounded-full border-2 border-yellow-500/30"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 flex items-center justify-center text-white font-bold text-xl border-2 border-yellow-500/30">
+                            {booking.studentName[0].toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Booking Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="text-2xl font-bold mb-1">{booking.studentName}</h3>
+                            {booking.studentEmail && (
+                              <p className="text-gray-400 text-sm">{booking.studentEmail}</p>
+                            )}
+                          </div>
+                          <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 text-xs font-medium rounded-full border border-yellow-500/30">
+                            Pending Approval
+                          </span>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-4 mb-4">
+                          <div className="flex items-center gap-3">
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <div>
+                              <p className="text-sm text-gray-400">Date & Time</p>
+                              <p className="text-white font-medium">
+                                {format(bookingDate, "EEEE, MMMM d, yyyy")}
+                              </p>
+                              <p className="text-gray-400 text-sm">
+                                {format(bookingDate, "h:mm a")} - {format(booking.scheduledEnd.toDate(), "h:mm a")}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3">
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div>
+                              <p className="text-sm text-gray-400">Duration</p>
+                              <p className="text-white font-medium">{booking.sessionMinutes} minutes</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-3">
+                          <GlowButton
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleConfirmBooking(booking.id)}
+                            glowColor="blue"
+                          >
+                            Confirm Booking
+                          </GlowButton>
+                          <GlowButton
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRejectBooking(booking.id)}
+                            glowColor="purple"
+                          >
+                            Reject
+                          </GlowButton>
+                        </div>
+                      </div>
+                    </div>
+                  </GradientCard>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Other Bookings */}
+        {otherBookings.length > 0 && (
+          <div>
+            {requestedBookingsList.length > 0 && <h2 className="text-2xl font-bold mb-4">All Bookings</h2>}
+            <div className="space-y-4">
+              {otherBookings.map((booking) => {
+                const bookingDate = booking.scheduledStart.toDate();
+                const isUpcoming = bookingDate > new Date() && booking.status === "confirmed";
+                const isPast = bookingDate < new Date() || booking.status === "completed" || booking.status === "cancelled";
+
+                return (
             <GradientCard key={booking.id} className="p-6">
               <div className="flex items-start gap-6">
                 {/* Student Avatar */}
@@ -413,8 +557,11 @@ export default function CoachBookingsPage() {
                 </div>
               </div>
             </GradientCard>
-          );
-        })}
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   };

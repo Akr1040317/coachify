@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
@@ -11,7 +11,7 @@ import { GlowButton } from "@/components/ui/GlowButton";
 import Link from "next/link";
 import { format } from "date-fns";
 
-export default function StudentBookingsPage() {
+function BookingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
@@ -155,6 +155,14 @@ export default function StudentBookingsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function StudentBookingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[var(--background)] p-8"><div className="text-center py-12 text-gray-400">Loading...</div></div>}>
+      <BookingsContent />
+    </Suspense>
   );
 }
 
