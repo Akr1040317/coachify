@@ -8,6 +8,7 @@ import { where } from "firebase/firestore";
 import { User } from "firebase/auth";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { BadgeVerified } from "@/components/ui/BadgeVerified";
+import { CourseModal } from "@/components/ui/CourseModal";
 import Link from "next/link";
 
 export default function CoachMyPage() {
@@ -17,6 +18,8 @@ export default function CoachMyPage() {
   const [articles, setArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showLearnMoreModal, setShowLearnMoreModal] = useState(false);
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [showCourseModal, setShowCourseModal] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -218,7 +221,14 @@ export default function CoachMyPage() {
                 <div className="flex gap-6 pb-4" style={{ width: 'max-content' }}>
                   {courses.length > 0 ? (
                     courses.map((course) => (
-                      <Link key={course.id} href={`/course/${course.id}`} className="flex-shrink-0 w-80">
+                      <div
+                        key={course.id}
+                        onClick={() => {
+                          setSelectedCourseId(course.id);
+                          setShowCourseModal(true);
+                        }}
+                        className="flex-shrink-0 w-80 cursor-pointer"
+                      >
                         <GradientCard className="p-6 h-full hover:scale-105 transition-transform cursor-pointer">
                           <h3 className="text-xl font-bold mb-2">{course.title}</h3>
                           <p className="text-gray-400 text-sm mb-4 line-clamp-3">{course.description}</p>
@@ -228,7 +238,7 @@ export default function CoachMyPage() {
                             <p className="text-green-400 font-bold text-lg">FREE</p>
                           )}
                         </GradientCard>
-                      </Link>
+                      </div>
                     ))
                   ) : (
                     // Placeholder card matching the course card style
@@ -333,6 +343,17 @@ export default function CoachMyPage() {
           )}
         </div>
       </div>
+      {selectedCourseId && (
+        <CourseModal
+          courseId={selectedCourseId}
+          isOpen={showCourseModal}
+          onClose={() => {
+            setShowCourseModal(false);
+            setSelectedCourseId(null);
+          }}
+        />
+      )}
     </DashboardLayout>
   );
 }
+

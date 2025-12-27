@@ -91,15 +91,48 @@ export async function POST(request: NextRequest) {
       } 
       // Handle booking update or creation
       else if (metadata?.bookingId) {
-        // Keep booking as "requested" - coach will confirm it
-        // Status is already set when booking was created
+        // Update booking status and confirm in Cal.com if applicable
+        const booking = await getBooking(metadata.bookingId);
+        if (booking) {
+          await updateBooking(metadata.bookingId, {
+            status: "confirmed",
+            paymentStatus: "paid",
+            stripePaymentIntentId: paymentIntentId,
+          });
+
+          // Confirm booking in Cal.com if it exists
+          if (booking.calcomBookingId) {
+            try {
+              const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calcom/confirm-booking`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  bookingId: metadata.bookingId,
+                  calcomBookingId: booking.calcomBookingId,
+                }),
+              });
+              if (!response.ok) {
+                console.error("Failed to confirm Cal.com booking:", await response.text());
+              }
+            } catch (error) {
+              console.error("Error confirming Cal.com booking:", error);
+            }
+          }
+        }
       } else if (metadata?.coachId && metadata?.scheduledStart) {
         // Create booking for session
         const scheduledStart = Timestamp.fromDate(new Date(metadata.scheduledStart));
         const sessionMinutes = parseInt(metadata.sessionMinutes || "60");
-        const scheduledEnd = Timestamp.fromDate(new Date(scheduledStart.toDate().getTime() + sessionMinutes * 60 * 1000));
+        const scheduledEnd = metadata.scheduledEnd
+          ? Timestamp.fromDate(new Date(metadata.scheduledEnd))
+          : Timestamp.fromDate(new Date(scheduledStart.toDate().getTime() + sessionMinutes * 60 * 1000));
 
-        await createBooking({
+        // Get coach to get timezone
+        const coach = await getCoachData(metadata.coachId);
+        const timeZone = metadata.timeZone || coach?.timezone || coach?.timeZone || "America/New_York";
+        const bufferMinutes = parseInt(metadata.bufferMinutes || "0");
+
+        const bookingId = await createBooking({
           studentId: userId,
           coachId: metadata.coachId,
           type: "paid",
@@ -111,7 +144,27 @@ export async function POST(request: NextRequest) {
           scheduledEnd,
           stripeCheckoutSessionId: session.id,
           customOfferingId: metadata.customOfferingId,
+          timeZone,
+          bufferMinutes,
+          cancellationPolicy: {
+            hoursBeforeFullRefund: 24,
+            hoursBeforePartialRefund: 2,
+            partialRefundPercent: 50,
+          },
         });
+
+        // Sync booking to Google Calendar if enabled
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+          await fetch(`${baseUrl}/api/google-calendar/sync`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bookingId, action: "create" }),
+          });
+        } catch (error) {
+          console.error("Error syncing booking to Google Calendar:", error);
+          // Don't fail the booking if Google Calendar sync fails
+        }
       }
     }
 

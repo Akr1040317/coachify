@@ -9,6 +9,7 @@ import { User } from "firebase/auth";
 import { where, orderBy } from "firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
+import { CourseModal } from "@/components/ui/CourseModal";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths, isToday } from "date-fns";
 import Link from "next/link";
 import Image from "next/image";
@@ -47,6 +48,8 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
   const coachesScrollRef = useRef<HTMLDivElement>(null);
   const coursesScrollRef = useRef<HTMLDivElement>(null);
   const sportsScrollRef = useRef<HTMLDivElement>(null);
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
+  const [showCourseModal, setShowCourseModal] = useState(false);
 
   useEffect(() => {
     if (activeTab !== undefined) {
@@ -421,7 +424,14 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
                             }}
                           >
                             {coachCourses.map((course) => (
-                              <Link key={course.id} href={`/course/${course.id}`} onClick={() => setShowModal(false)}>
+                              <div
+                                key={course.id}
+                                onClick={() => {
+                                  setSelectedCourseId(course.id);
+                                  setShowCourseModal(true);
+                                }}
+                                className="cursor-pointer"
+                              >
                                 <GradientCard className="w-64 flex-shrink-0 hover:scale-105 transition-transform cursor-pointer overflow-hidden">
                                   {course.thumbnailUrl && (
                                     <div className="w-full h-40 relative">
@@ -445,7 +455,7 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
                                     </div>
                                   </div>
                                 </GradientCard>
-                              </Link>
+                              </div>
                             ))}
                           </div>
                         </div>
@@ -457,7 +467,14 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
                           <h3 className="text-2xl font-bold mb-4">Session Offerings</h3>
                           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {coachOfferings.map((offering: any) => (
-                              <GradientCard key={offering.id} className="p-4">
+                              <GradientCard
+                                key={offering.id}
+                                className="p-4 cursor-pointer hover:scale-105 transition-transform"
+                                onClick={() => {
+                                  router.push(`/app/student/bookings/new?coachId=${coach.id}&offeringId=${offering.id}`);
+                                  setShowModal(false);
+                                }}
+                              >
                                 <div className="flex items-center justify-between mb-2">
                                   <h4 className="font-bold text-lg">{offering.name}</h4>
                                   {offering.isFree ? (
@@ -893,7 +910,13 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
   // Course Card Component
   const CourseCardComponent = ({ course }: { course: any }) => {
     return (
-      <Link href={`/course/${course.id}`}>
+      <div
+        onClick={() => {
+          setSelectedCourseId(course.id);
+          setShowCourseModal(true);
+        }}
+        className="cursor-pointer"
+      >
         <GradientCard className="w-72 md:w-80 h-[420px] flex-shrink-0 hover:scale-105 transition-transform cursor-pointer overflow-hidden flex flex-col">
           <div className="relative flex-shrink-0">
             <div className="w-full h-48 relative">
@@ -933,7 +956,7 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
             </div>
           </div>
         </GradientCard>
-            </Link>
+      </div>
     );
   };
 
@@ -1480,7 +1503,14 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredCourses.map((course) => (
-                <Link key={course.id} href={`/course/${course.id}`}>
+                <div
+                  key={course.id}
+                  onClick={() => {
+                    setSelectedCourseId(course.id);
+                    setShowCourseModal(true);
+                  }}
+                  className="cursor-pointer"
+                >
                   <GradientCard className="h-full hover:scale-105 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col group">
                     {course.thumbnailUrl && (
                       <div className="w-full h-64 relative flex-shrink-0 overflow-hidden">
@@ -1545,7 +1575,7 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
                       </div>
                     </div>
                   </GradientCard>
-                </Link>
+                </div>
               ))}
             </div>
           )}
@@ -1739,9 +1769,21 @@ function StudentDashboard({ activeTab = "dashboard", setActiveTab }: StudentDash
   };
 
   return (
-    <DashboardLayout role="student" activeTab={currentTab} setActiveTab={handleTabChangeFromLayout}>
-      {renderContent()}
-    </DashboardLayout>
+    <>
+      <DashboardLayout role="student" activeTab={currentTab} setActiveTab={handleTabChangeFromLayout}>
+        {renderContent()}
+      </DashboardLayout>
+      {selectedCourseId && (
+        <CourseModal
+          courseId={selectedCourseId}
+          isOpen={showCourseModal}
+          onClose={() => {
+            setShowCourseModal(false);
+            setSelectedCourseId(null);
+          }}
+        />
+      )}
+    </>
   );
 }
 

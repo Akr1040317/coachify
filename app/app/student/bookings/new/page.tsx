@@ -9,6 +9,11 @@ import { where } from "firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { BadgeVerified } from "@/components/ui/BadgeVerified";
+import { motion } from "framer-motion";
+import { getUserTimezone, convertTimeSlotToStudentTimezone, storeBookingTime } from "@/lib/utils/timezone";
+import { calculateAvailableSlotsWithBuffers, getEffectiveAvailability } from "@/lib/utils/booking";
+import { BookingCalendar } from "@/components/booking/BookingCalendar";
+import { eachDayOfInterval, startOfWeek, endOfWeek, addDays, format as dateFnsFormat, startOfMonth, endOfMonth } from "date-fns";
 
 function NewBookingPageContent() {
   const router = useRouter();
@@ -25,6 +30,7 @@ function NewBookingPageContent() {
   const [loading, setLoading] = useState(true);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [studentTimezone, setStudentTimezone] = useState<string>("UTC");
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -33,6 +39,8 @@ function NewBookingPageContent() {
         return;
       }
       setUser(user);
+      // Detect student's timezone
+      setStudentTimezone(getUserTimezone());
       if (coachId) {
         await loadCoach(coachId);
       }
@@ -78,45 +86,49 @@ function NewBookingPageContent() {
     if (!date || !coach) return [];
     
     const selectedDateObj = new Date(date);
-    const dayOfWeek = selectedDateObj.getDay();
+    const coachTimezone = coach.timezone || coach.timeZone || "America/New_York";
     
-    // Get availability for this day
-    const availabilitySlots = coach.availabilitySlots || [];
-    const dayAvailability = availabilitySlots.find((slot: any) => slot.dayOfWeek === dayOfWeek && slot.isAvailable);
+    // Get effective availability (weekly + overrides)
+    const effectiveAvailability = getEffectiveAvailability(
+      selectedDateObj,
+      coach.availabilitySlots || [],
+      coach.availabilityOverrides
+    );
     
-    if (!dayAvailability) return [];
-    
-    const slots: string[] = [];
-    const [startHour, startMin] = dayAvailability.startTime.split(":").map(Number);
-    const [endHour, endMin] = dayAvailability.endTime.split(":").map(Number);
-    
-    const startMinutes = startHour * 60 + startMin;
-    const endMinutes = endHour * 60 + endMin;
-    
-    // Generate 30-minute slots
-    for (let minutes = startMinutes; minutes < endMinutes; minutes += 30) {
-      const hour = Math.floor(minutes / 60);
-      const min = minutes % 60;
-      const timeString = `${hour.toString().padStart(2, "0")}:${min.toString().padStart(2, "0")}`;
-      
-      // Check if slot is already booked
-      const slotDateTime = new Date(selectedDateObj);
-      slotDateTime.setHours(hour, min, 0, 0);
-      
-      const isBooked = bookings.some((booking) => {
-        const bookingDate = booking.scheduledStart.toDate();
-        return (
-          bookingDate.getTime() === slotDateTime.getTime() &&
-          booking.status !== "cancelled"
-        );
-      });
-      
-      if (!isBooked) {
-        slots.push(timeString);
-      }
+    if (!effectiveAvailability || !effectiveAvailability.isAvailable) {
+      return [];
     }
     
-    return slots;
+    // Get buffer minutes from selected offering
+    let bufferMinutes = 0;
+    if (selectedType === "custom" && selectedCustomOffering) {
+      const offering = coach.customOfferings?.find((o: any) => o.id === selectedCustomOffering);
+      bufferMinutes = offering?.bufferMinutes || 0;
+    }
+    
+    // Calculate slots with buffer time enforcement
+    const slots = calculateAvailableSlotsWithBuffers(
+      selectedDateObj,
+      {
+        dayOfWeek: selectedDateObj.getDay(),
+        startTime: effectiveAvailability.startTime,
+        endTime: effectiveAvailability.endTime,
+        isAvailable: true,
+      },
+      bookings.map((b) => ({
+        scheduledStart: b.scheduledStart,
+        scheduledEnd: b.scheduledEnd,
+        status: b.status,
+        bufferMinutes: b.bufferMinutes,
+      })),
+      selectedMinutes || 30,
+      bufferMinutes
+    );
+    
+    // Convert slots to student's timezone for display
+    return slots.map((slot) =>
+      convertTimeSlotToStudentTimezone(selectedDateObj, slot, coachTimezone, studentTimezone)
+    );
   };
 
   useEffect(() => {
@@ -138,7 +150,33 @@ function NewBookingPageContent() {
       return;
     }
 
-    const scheduledStart = new Date(`${selectedDate}T${selectedTime}`);
+    const coachTimezone = coach.timezone || coach.timeZone || "America/New_York";
+    
+    // Convert selected time back to coach's timezone for storage
+    // The selectedTime is in student's timezone, we need to convert it to coach's timezone
+    const selectedDateObj = new Date(selectedDate);
+    const [hour, minute] = selectedTime.split(":").map(Number);
+    
+    // Create date in student's timezone
+    const dateInStudentTz = new Date(selectedDateObj);
+    dateInStudentTz.setHours(hour, minute, 0, 0);
+    
+    // Convert to coach's timezone, then to UTC for storage
+    const { utcDate: scheduledStart } = storeBookingTime(
+      dateInStudentTz,
+      selectedTime,
+      studentTimezone
+    );
+    
+    // Calculate end time
+    const scheduledEnd = new Date(scheduledStart.getTime() + (selectedMinutes || 30) * 60 * 1000);
+    
+    // Get buffer minutes and cancellation policy
+    let bufferMinutes = 0;
+    if (selectedType === "custom" && selectedCustomOffering) {
+      const offering = coach.customOfferings?.find((o: any) => o.id === selectedCustomOffering);
+      bufferMinutes = offering?.bufferMinutes || 0;
+    }
 
     if (selectedType === "free_intro") {
       try {
@@ -148,7 +186,10 @@ function NewBookingPageContent() {
           body: JSON.stringify({
             coachId,
             scheduledStart: scheduledStart.toISOString(),
+            scheduledEnd: scheduledEnd.toISOString(),
             studentId: user.uid,
+            timeZone: coachTimezone,
+            bufferMinutes: bufferMinutes,
           }),
         });
 
@@ -179,10 +220,13 @@ function NewBookingPageContent() {
             coachId,
             sessionMinutes: offering.durationMinutes,
             scheduledStart: scheduledStart.toISOString(),
+            scheduledEnd: scheduledEnd.toISOString(),
             bookingType: "paid",
             userId: user.uid,
             customOfferingId: offering.id,
             priceCents: offering.priceCents,
+            timeZone: coachTimezone,
+            bufferMinutes: offering.bufferMinutes || 0,
           }),
         });
 
@@ -202,8 +246,11 @@ function NewBookingPageContent() {
             coachId,
             sessionMinutes: selectedMinutes,
             scheduledStart: scheduledStart.toISOString(),
+            scheduledEnd: scheduledEnd.toISOString(),
             bookingType: "paid",
             userId: user.uid,
+            timeZone: coachTimezone,
+            bufferMinutes: bufferMinutes,
           }),
         });
 
@@ -342,15 +389,31 @@ function NewBookingPageContent() {
             )}
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Enhanced Calendar UI */}
             <div>
-              <label className="block text-sm font-medium mb-2">Date</label>
+              <label className="block text-sm font-medium mb-4">Select Date</label>
+              <BookingCalendar
+                selectedDate={selectedDate}
+                onDateSelect={(date) => {
+                  setSelectedDate(date);
+                  setSelectedTime(""); // Reset time when date changes
+                }}
+                coachTimezone={coach?.timezone || coach?.timeZone}
+                minDate={new Date()}
+                maxDate={addDays(new Date(), 90)} // Allow booking up to 90 days ahead
+              />
+            </div>
+
+            {/* Fallback date picker (mobile-friendly) */}
+            <div className="md:hidden">
+              <label className="block text-sm font-medium mb-2">Or pick a date</label>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => {
                   setSelectedDate(e.target.value);
-                  setSelectedTime(""); // Reset time when date changes
+                  setSelectedTime("");
                 }}
                 min={new Date().toISOString().split("T")[0]}
                 className="w-full px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white"
@@ -359,27 +422,44 @@ function NewBookingPageContent() {
 
             {selectedDate && (
               <div>
-                <label className="block text-sm font-medium mb-2">Available Times</label>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium">Available Times</label>
+                  {coach?.timezone && (
+                    <span className="text-xs text-gray-400">
+                      Times in {Intl.DateTimeFormat(undefined, { timeZone: coach.timezone || coach.timeZone || "UTC", timeZoneName: "short" }).formatToParts(new Date()).find(part => part.type === "timeZoneName")?.value || coach.timezone}
+                    </span>
+                  )}
+                </div>
                 {availableSlots.length === 0 ? (
-                  <p className="text-sm text-gray-400 py-4">
-                    No available slots for this date. Please select another date.
-                  </p>
+                  <div className="bg-gray-800/30 border-2 border-gray-700 rounded-lg p-6 text-center">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-gray-400 mb-1">
+                      No available slots for this date
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Please select another date
+                    </p>
+                  </div>
                 ) : (
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {availableSlots.map((slot) => (
-                      <button
+                      <motion.button
                         key={slot}
                         onClick={() => setSelectedTime(slot)}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
                         className={`
-                          px-3 py-2 rounded-lg border-2 transition-all text-sm
+                          px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium
                           ${selectedTime === slot
-                            ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                            : "border-gray-600 hover:border-gray-500 text-gray-300"
+                            ? "border-blue-500 bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/20"
+                            : "border-gray-600 hover:border-gray-500 text-gray-300 hover:bg-gray-800/50"
                           }
                         `}
                       >
                         {slot}
-                      </button>
+                      </motion.button>
                     ))}
                   </div>
                 )}

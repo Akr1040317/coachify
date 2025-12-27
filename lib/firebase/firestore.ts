@@ -98,6 +98,21 @@ export interface CoachData {
   complianceStatus?: "pending" | "approved" | "flagged" | "rejected";
   complianceCheckDate?: Timestamp;
   complianceNotes?: string;
+  availabilitySlots?: Array<{
+    dayOfWeek: number; // 0 = Sunday, 1 = Monday, etc.
+    startTime: string; // HH:mm format
+    endTime: string; // HH:mm format
+    isAvailable: boolean;
+  }>;
+  availabilityOverrides?: Array<{
+    date: string; // ISO date string
+    isAvailable: boolean;
+    startTime?: string; // Override start time
+    endTime?: string; // Override end time
+  }>;
+  googleCalendarAccessToken?: string; // Encrypted
+  googleCalendarRefreshToken?: string; // Encrypted
+  googleCalendarSyncEnabled?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -419,6 +434,23 @@ export interface BookingData {
   meetingLink?: string;
   stripeCheckoutSessionId?: string;
   customOfferingId?: string;
+  timeZone?: string; // Coach's timezone at booking time
+  bufferMinutes?: number; // Buffer time from offering
+  cancellationPolicy?: {
+    hoursBeforeFullRefund: number; // e.g., 24
+    hoursBeforePartialRefund: number; // e.g., 2
+    partialRefundPercent: number; // e.g., 50
+  };
+  cancelledAt?: Timestamp;
+  cancellationReason?: string;
+  cancelledBy?: "coach" | "student";
+  refundId?: string; // Stripe refund ID
+  refundAmountCents?: number;
+  rescheduledAt?: Timestamp;
+  rescheduleReason?: string;
+  originalScheduledStart?: Timestamp; // For rescheduled bookings
+  googleCalendarEventId?: string; // For Google Calendar sync
+  stripePaymentIntentId?: string; // Link to payment
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

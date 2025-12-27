@@ -22,3 +22,12 @@ export function calculateCoachEarnings(amountCents: number, platformFeeCents: nu
   return amountCents - platformFeeCents;
 }
 
+// Cancellation policy configuration
+export const CANCELLATION_POLICY = {
+  FULL_REFUND_HOURS: 24, // Full refund if cancelled >24h before
+  PARTIAL_REFUND_HOURS: 2, // Partial refund if cancelled 2-24h before
+  PARTIAL_REFUND_PERCENT: 50, // 50% refund
+  NO_REFUND_HOURS: 2, // No refund if cancelled <2h before
+};
+
+

@@ -8,6 +8,8 @@ import { User } from "firebase/auth";
 import { where, orderBy } from "firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
+import { CancelBookingModal } from "@/components/booking/CancelBookingModal";
+import { RescheduleBookingModal } from "@/components/booking/RescheduleBookingModal";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths, isToday, isPast, isFuture } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -25,6 +27,10 @@ export default function CoachBookingsPage() {
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [filterStatus, setFilterStatus] = useState<"all" | "upcoming" | "past" | "today">("all");
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<BookingWithStudent | null>(null);
+  const [coach, setCoach] = useState<any>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -40,6 +46,11 @@ export default function CoachBookingsPage() {
   const loadBookings = async (coachId: string) => {
     setLoading(true);
     try {
+      // Load coach data
+      const { getCoachData } = await import("@/lib/firebase/firestore");
+      const coachData = await getCoachData(coachId);
+      setCoach(coachData);
+
       const bookingsData = await getBookings([
         where("coachId", "==", coachId),
         orderBy("scheduledStart", "desc"),
@@ -96,14 +107,68 @@ export default function CoachBookingsPage() {
     }
   };
 
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!user || !confirm("Are you sure you want to cancel this booking?")) return;
+  const handleCancelBooking = async (reason: string) => {
+    if (!user || !selectedBooking) return;
     try {
-      await updateBooking(bookingId, { status: "cancelled" });
+      const response = await fetch("/api/bookings/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: selectedBooking.id,
+          reason,
+          cancelledBy: "coach",
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to cancel booking");
+      }
+
+      const result = await response.json();
       await loadBookings(user.uid);
-    } catch (error) {
+      alert(result.message || "Booking cancelled successfully");
+      setShowCancelModal(false);
+      setSelectedBooking(null);
+    } catch (error: any) {
       console.error("Error cancelling booking:", error);
-      alert("Failed to cancel booking");
+      alert(error.message || "Failed to cancel booking");
+    }
+  };
+
+  const handleRescheduleBooking = async (
+    newStartTime: string,
+    newEndTime: string,
+    reason: string,
+    newOfferingId?: string
+  ) => {
+    if (!user || !selectedBooking) return;
+    try {
+      const response = await fetch("/api/bookings/reschedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: selectedBooking.id,
+          newStartTime,
+          newEndTime,
+          reason,
+          newOfferingId,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to reschedule booking");
+      }
+
+      const result = await response.json();
+      await loadBookings(user.uid);
+      alert(result.message || "Booking rescheduled successfully");
+      setShowRescheduleModal(false);
+      setSelectedBooking(null);
+    } catch (error: any) {
+      console.error("Error rescheduling booking:", error);
+      alert(error.message || "Failed to reschedule booking");
     }
   };
 
@@ -311,14 +376,29 @@ export default function CoachBookingsPage() {
                       </GlowButton>
                     )}
                     {isUpcoming && (
-                      <GlowButton
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCancelBooking(booking.id)}
-                        className="border-red-500/30 text-red-400 hover:bg-red-500/10"
-                      >
-                        Cancel Booking
-                      </GlowButton>
+                      <>
+                        <GlowButton
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setShowRescheduleModal(true);
+                          }}
+                        >
+                          Reschedule
+                        </GlowButton>
+                        <GlowButton
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setShowCancelModal(true);
+                          }}
+                          className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                        >
+                          Cancel
+                        </GlowButton>
+                      </>
                     )}
                     {isPast && booking.status === "confirmed" && (
                       <GlowButton
@@ -525,7 +605,57 @@ export default function CoachBookingsPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Cancel Modal */}
+      {selectedBooking && (
+        <CancelBookingModal
+          isOpen={showCancelModal}
+          onClose={() => {
+            setShowCancelModal(false);
+            setSelectedBooking(null);
+          }}
+          booking={{
+            id: selectedBooking.id,
+            scheduledStart: selectedBooking.scheduledStart.toDate(),
+            priceCents: selectedBooking.priceCents,
+            type: selectedBooking.type,
+            cancellationPolicy: selectedBooking.cancellationPolicy,
+          }}
+          onConfirm={handleCancelBooking}
+        />
+      )}
+
+      {/* Reschedule Modal */}
+      {selectedBooking && coach && (
+        <RescheduleBookingModal
+          isOpen={showRescheduleModal}
+          onClose={() => {
+            setShowRescheduleModal(false);
+            setSelectedBooking(null);
+          }}
+          booking={{
+            id: selectedBooking.id,
+            scheduledStart: selectedBooking.scheduledStart.toDate(),
+            scheduledEnd: selectedBooking.scheduledEnd.toDate(),
+            coachId: selectedBooking.coachId,
+            sessionMinutes: selectedBooking.sessionMinutes,
+            priceCents: selectedBooking.priceCents,
+            customOfferingId: selectedBooking.customOfferingId,
+            bufferMinutes: selectedBooking.bufferMinutes,
+          }}
+          coach={coach}
+          existingBookings={bookings.map((b) => ({
+            id: b.id,
+            scheduledStart: b.scheduledStart,
+            scheduledEnd: b.scheduledEnd,
+            status: b.status,
+            bufferMinutes: b.bufferMinutes,
+          }))}
+          onConfirm={handleRescheduleBooking}
+        />
+      )}
     </DashboardLayout>
   );
 }
+
 

@@ -4,7 +4,7 @@ import { where, Timestamp } from "firebase/firestore";
 
 export async function POST(request: NextRequest) {
   try {
-    const { coachId, scheduledStart, studentId } = await request.json();
+    const { coachId, scheduledStart, scheduledEnd, studentId, timeZone, bufferMinutes } = await request.json();
 
     // Check rate limit: one free intro per student per coach every 30 days
     const thirtyDaysAgo = Timestamp.fromDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
@@ -31,9 +31,11 @@ export async function POST(request: NextRequest) {
     }
 
     const startTime = Timestamp.fromDate(new Date(scheduledStart));
-    const endTime = Timestamp.fromDate(
-      new Date(startTime.toDate().getTime() + coach.sessionOffers.freeIntroMinutes * 60 * 1000)
-    );
+    const endTime = scheduledEnd 
+      ? Timestamp.fromDate(new Date(scheduledEnd))
+      : Timestamp.fromDate(
+          new Date(startTime.toDate().getTime() + coach.sessionOffers.freeIntroMinutes * 60 * 1000)
+        );
 
     const bookingId = await createBooking({
       studentId,
@@ -45,7 +47,22 @@ export async function POST(request: NextRequest) {
       status: "confirmed",
       scheduledStart: startTime,
       scheduledEnd: endTime,
+      timeZone: timeZone || coach.timezone || coach.timeZone || "America/New_York",
+      bufferMinutes: bufferMinutes || 0,
     });
+
+    // Sync booking to Google Calendar if enabled
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+      await fetch(`${baseUrl}/api/google-calendar/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, action: "create" }),
+      });
+    } catch (error) {
+      console.error("Error syncing booking to Google Calendar:", error);
+      // Don't fail the booking if Google Calendar sync fails
+    }
 
     return NextResponse.json({ bookingId });
   } catch (error: any) {
@@ -53,3 +70,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

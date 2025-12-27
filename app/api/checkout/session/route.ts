@@ -4,7 +4,7 @@ import { createConnectCheckoutSession } from "@/lib/firebase/payments";
 
 export async function POST(request: NextRequest) {
   try {
-    const { coachId, sessionMinutes, scheduledStart, bookingType, userId, customOfferingId, priceCents } = await request.json();
+    const { coachId, sessionMinutes, scheduledStart, scheduledEnd, bookingType, userId, customOfferingId, priceCents, timeZone, bufferMinutes } = await request.json();
 
     if (!coachId || !scheduledStart || !userId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -71,8 +71,11 @@ export async function POST(request: NextRequest) {
         coachId,
         sessionMinutes: finalMinutes.toString(),
         scheduledStart,
+        scheduledEnd: scheduledEnd || new Date(new Date(scheduledStart).getTime() + finalMinutes * 60 * 1000).toISOString(),
         bookingType,
         type: "session",
+        timeZone: timeZone || coach.timezone || coach.timeZone || "America/New_York",
+        bufferMinutes: (bufferMinutes || 0).toString(),
         ...(customOfferingId && { customOfferingId }),
       },
     });
