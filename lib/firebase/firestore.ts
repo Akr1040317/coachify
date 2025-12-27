@@ -118,9 +118,23 @@ export interface CoachData {
 }
 
 // User operations
-export const getUserData = async (uid: string): Promise<UserData | null> => {
+export const getUserData = async (uid: string, useCache: boolean = true): Promise<UserData | null> => {
   if (!db) throw new Error("Firestore is not initialized");
   const docRef = doc(db, "users", uid);
+  
+  // Try cache first for faster response on production
+  if (useCache) {
+    try {
+      const cachedSnap = await getDocFromCache(docRef);
+      if (cachedSnap.exists()) {
+        return cachedSnap.data() as UserData;
+      }
+    } catch (error) {
+      // Cache miss or error - fall through to network request
+    }
+  }
+  
+  // Network request
   const docSnap = await getDoc(docRef);
   if (docSnap.exists()) {
     return docSnap.data() as UserData;

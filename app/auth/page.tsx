@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithGoogle, signUpWithEmail, signInWithEmail, onAuthChange, handleGoogleRedirect } from "@/lib/firebase/auth";
+import { signInWithGoogle, signUpWithEmail, signInWithEmail, onAuthChange, handleGoogleRedirect, auth } from "@/lib/firebase/auth";
 import { getUserData, createUserData } from "@/lib/firebase/firestore";
 import { User } from "firebase/auth";
 import { GlowButton } from "@/components/ui/GlowButton";
@@ -48,6 +48,14 @@ function AuthPageContent() {
     }
   }, [mode, router]);
 
+  // Check if user is already authenticated on mount (faster than waiting for onAuthChange)
+  useEffect(() => {
+    if (auth && auth.currentUser) {
+      setLoading(true);
+      // User already authenticated, onAuthChange will handle redirect
+    }
+  }, []);
+
   // Handle Google OAuth redirect callback
   useEffect(() => {
     const checkRedirectResult = async () => {
@@ -63,7 +71,14 @@ function AuthPageContent() {
       }
       
       try {
-        const user = await handleGoogleRedirect();
+        // Add timeout for redirect handling
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('REDIRECT_TIMEOUT')), 8000)
+        );
+        
+        const redirectPromise = handleGoogleRedirect();
+        const user = await Promise.race([redirectPromise, timeoutPromise]) as Awaited<ReturnType<typeof handleGoogleRedirect>>;
+        
         if (user) {
           // User returned from redirect, onAuthChange will handle the rest
           // Clear URL params after processing to prevent re-processing
@@ -81,6 +96,18 @@ function AuthPageContent() {
         }
       } catch (error: any) {
         console.error("Error handling redirect:", error);
+        
+        // Handle timeout
+        if (error.message === 'REDIRECT_TIMEOUT') {
+          console.warn("Redirect handling timed out, checking auth state");
+          // Clear URL params
+          if (hasAuthParams) {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+          // Let onAuthChange handle it - user might still be authenticated
+          return;
+        }
+        
         // Clear URL params on error
         if (hasAuthParams) {
           window.history.replaceState({}, '', window.location.pathname);
@@ -98,9 +125,16 @@ function AuthPageContent() {
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
       if (user) {
+        setLoading(true);
         try {
-          // Check if user data exists
-          const userData = await getUserData(user.uid);
+          // Add timeout to prevent infinite loading on slow networks
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('TIMEOUT')), 10000)
+          );
+          
+          // Check if user data exists with timeout
+          const userDataPromise = getUserData(user.uid);
+          const userData = await Promise.race([userDataPromise, timeoutPromise]) as Awaited<ReturnType<typeof getUserData>>;
           
           if (!userData) {
             // New user signing in - redirect to get-started
@@ -117,6 +151,17 @@ function AuthPageContent() {
           }
         } catch (fetchError: any) {
           console.error("Error fetching user data:", fetchError);
+          
+          // Handle timeout specifically
+          if (fetchError.message === 'TIMEOUT') {
+            // Try to redirect anyway - user is authenticated, just data fetch timed out
+            // They can retry from dashboard if needed
+            console.warn("User data fetch timed out, redirecting to dashboard");
+            router.push("/app/student/dashboard"); // Default fallback
+            setLoading(false);
+            return;
+          }
+          
           // If it's a permissions error, show helpful message
           if (fetchError.code === "permission-denied" || fetchError.message?.includes("permission")) {
             setError(
@@ -127,6 +172,9 @@ function AuthPageContent() {
           }
           setLoading(false);
         }
+      } else {
+        // User signed out
+        setLoading(false);
       }
     });
 
