@@ -43,6 +43,7 @@ export default function OfferingsPage() {
     description: "",
     durationMinutes: 30,
     priceCents: 0,
+    priceInput: "",
     currency: "USD",
     isFree: false,
     isActive: true,
@@ -119,6 +120,7 @@ export default function OfferingsPage() {
       description: "",
       durationMinutes: 30,
       priceCents: 0,
+      priceInput: "",
       currency: "USD",
       isFree: false,
       isActive: true,
@@ -135,6 +137,7 @@ export default function OfferingsPage() {
       description: offering.description,
       durationMinutes: offering.durationMinutes,
       priceCents: offering.priceCents,
+      priceInput: offering.priceCents === 0 ? "" : (offering.priceCents / 100).toFixed(2),
       currency: offering.currency,
       isFree: offering.isFree,
       isActive: offering.isActive,
@@ -517,7 +520,7 @@ export default function OfferingsPage() {
                             <input
                               type="checkbox"
                               checked={formData.isFree}
-                              onChange={(e) => setFormData({ ...formData, isFree: e.target.checked, priceCents: e.target.checked ? 0 : formData.priceCents })}
+                              onChange={(e) => setFormData({ ...formData, isFree: e.target.checked, priceCents: e.target.checked ? 0 : formData.priceCents, priceInput: e.target.checked ? "" : formData.priceInput })}
                               className="w-5 h-5 rounded border-gray-600 bg-[var(--background)] text-blue-500 focus:ring-2 focus:ring-blue-500"
                             />
                             <span className="text-gray-300">Free session (no charge)</span>
@@ -533,16 +536,30 @@ export default function OfferingsPage() {
                             <div className="relative">
                               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                               <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={(formData.priceCents / 100).toFixed(2)}
-                                onChange={(e) =>
-                                  setFormData({
-                                    ...formData,
-                                    priceCents: Math.round(parseFloat(e.target.value) * 100) || 0,
-                                  })
-                                }
+                                type="text"
+                                value={formData.priceInput}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/[^0-9.]/g, "");
+                                  // Allow empty, single dot, or valid numbers with max 2 decimal places
+                                  if (value === "" || value === "." || /^\d*\.?\d{0,2}$/.test(value)) {
+                                    setFormData({ ...formData, priceInput: value });
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  const value = e.target.value.trim();
+                                  if (value === "" || value === ".") {
+                                    setFormData({ ...formData, priceInput: "", priceCents: 0 });
+                                  } else {
+                                    const parsed = parseFloat(value);
+                                    if (!isNaN(parsed) && parsed >= 0) {
+                                      const cents = Math.round(parsed * 100);
+                                      setFormData({ ...formData, priceInput: (cents / 100).toFixed(2), priceCents: cents });
+                                    } else {
+                                      setFormData({ ...formData, priceInput: "", priceCents: 0 });
+                                    }
+                                  }
+                                }}
+                                placeholder="0.00"
                                 className="w-full pl-8 pr-4 py-3 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               />
                             </div>

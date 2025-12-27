@@ -49,7 +49,6 @@ export default function CourseEditPage() {
   const [showAddArticle, setShowAddArticle] = useState(false);
   const [showAddExisting, setShowAddExisting] = useState(false);
   const [showEditDetails, setShowEditDetails] = useState(false);
-  const [priceInputValue, setPriceInputValue] = useState("");
   const [editingDetails, setEditingDetails] = useState({
     title: "",
     description: "",
@@ -99,17 +98,15 @@ export default function CourseEditPage() {
       setCourse(courseData as CourseData & { id: string });
       
       // Initialize editing details with current course data
-      const priceCents = courseData.priceCents || 0;
       setEditingDetails({
         title: courseData.title || "",
         description: courseData.description || "",
         sport: courseData.sport || "",
         skillLevel: courseData.skillLevel || "beginner",
-        priceCents,
+        priceCents: courseData.priceCents || 0,
         outcomes: courseData.outcomes && courseData.outcomes.length > 0 ? courseData.outcomes : [""],
         thumbnailFile: null,
       });
-      setPriceInputValue(formatCentsForInput(priceCents));
 
       // Load all coach's videos and articles for selection
       const [allVideos, allArticles] = await Promise.all([
@@ -880,32 +877,36 @@ export default function CourseEditPage() {
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
                       <input
                         type="text"
-                        value={priceInputValue}
+                        value={editingDetails.priceCents === 0 ? "" : (editingDetails.priceCents / 100).toFixed(2)}
                         onChange={(e) => {
                           const value = e.target.value.replace(/[^0-9.]/g, "");
-                          // Allow empty, single dot, or valid numbers
-                          if (value === "" || value === "." || /^\d*\.?\d*$/.test(value)) {
-                            setPriceInputValue(value);
+                          // Allow empty, single dot, or valid numbers with max 2 decimal places
+                          if (value === "" || value === "." || /^\d*\.?\d{0,2}$/.test(value)) {
+                            if (value === "" || value === ".") {
+                              setEditingDetails({ ...editingDetails, priceCents: 0 });
+                            } else {
+                              const parsed = parseFloat(value);
+                              if (!isNaN(parsed) && parsed >= 0) {
+                                setEditingDetails({ ...editingDetails, priceCents: Math.round(parsed * 100) });
+                              }
+                            }
                           }
                         }}
                         onBlur={(e) => {
                           const value = e.target.value.trim();
                           if (value === "" || value === ".") {
-                            setPriceInputValue("0.00");
                             setEditingDetails({ ...editingDetails, priceCents: 0 });
                           } else {
-                            const cents = parseCurrencyToCents(value);
-                            setPriceInputValue(formatCentsForInput(cents));
-                            setEditingDetails({ ...editingDetails, priceCents: cents });
+                            const parsed = parseFloat(value);
+                            if (!isNaN(parsed) && parsed >= 0) {
+                              setEditingDetails({ ...editingDetails, priceCents: Math.round(parsed * 100) });
+                            }
                           }
                         }}
-                        className="w-full pl-8 pr-4 py-3 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white"
                         placeholder="0.00"
+                        className="w-full pl-8 pr-4 py-3 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white"
                       />
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Current price: {formatCurrency(editingDetails.priceCents)}
-                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Learning Outcomes</label>
