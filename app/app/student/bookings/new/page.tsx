@@ -97,6 +97,7 @@ function NewBookingPageContent() {
             sessionMinutes: offering.durationMinutes,
             scheduledStart: scheduledStart.toISOString(),
             bookingType: "paid",
+            userId: user.uid,
             customOfferingId: offering.id,
             priceCents: offering.priceCents,
           }),
@@ -119,6 +120,7 @@ function NewBookingPageContent() {
             sessionMinutes: selectedMinutes,
             scheduledStart: scheduledStart.toISOString(),
             bookingType: "paid",
+            userId: user.uid,
           }),
         });
 
