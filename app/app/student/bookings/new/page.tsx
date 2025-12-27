@@ -15,8 +15,9 @@ function NewBookingPageContent() {
   const coachId = searchParams.get("coachId");
   const [user, setUser] = useState<User | null>(null);
   const [coach, setCoach] = useState<any>(null);
-  const [selectedType, setSelectedType] = useState<"free_intro" | "paid">("free_intro");
+  const [selectedType, setSelectedType] = useState<"free_intro" | "paid" | "custom">("free_intro");
   const [selectedMinutes, setSelectedMinutes] = useState(30);
+  const [selectedCustomOffering, setSelectedCustomOffering] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [loading, setLoading] = useState(true);
@@ -78,6 +79,34 @@ function NewBookingPageContent() {
       } catch (error) {
         console.error("Error booking:", error);
         alert("Failed to book session");
+      }
+    } else if (selectedType === "custom" && selectedCustomOffering) {
+      // Custom offering - create checkout
+      const offering = coach.customOfferings?.find((o: any) => o.id === selectedCustomOffering);
+      if (!offering) {
+        alert("Selected offering not found");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/checkout/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            coachId,
+            sessionMinutes: offering.durationMinutes,
+            scheduledStart: scheduledStart.toISOString(),
+            bookingType: "paid",
+            customOfferingId: offering.id,
+            priceCents: offering.priceCents,
+          }),
+        });
+
+        const { checkoutUrl } = await response.json();
+        window.location.href = checkoutUrl;
+      } catch (error) {
+        console.error("Error creating checkout:", error);
+        alert("Failed to start checkout");
       }
     } else {
       // Paid session - create checkout
@@ -179,10 +208,11 @@ function NewBookingPageContent() {
                 onClick={() => {
                   setSelectedType("paid");
                   setSelectedMinutes(60);
+                  setSelectedCustomOffering(null);
                 }}
                 className={`
                   w-full p-4 rounded-lg border-2 text-left transition-all
-                  ${selectedType === "paid" && selectedMinutes === 60
+                  ${selectedType === "paid" && selectedMinutes === 60 && !selectedCustomOffering
                     ? "border-blue-500 bg-blue-500/10"
                     : "border-gray-600 hover:border-gray-500"
                   }
@@ -191,6 +221,39 @@ function NewBookingPageContent() {
                 <div className="font-semibold">60-minute Session</div>
                 <div className="text-sm text-gray-400">${price60}</div>
               </button>
+            )}
+            {/* Custom Offerings */}
+            {coach.customOfferings && coach.customOfferings.filter((o: any) => o.isActive && !o.isFree).length > 0 && (
+              <>
+                <div className="text-sm text-gray-400 mt-4 mb-2">Custom Offerings</div>
+                {coach.customOfferings
+                  .filter((o: any) => o.isActive && !o.isFree)
+                  .map((offering: any) => (
+                    <button
+                      key={offering.id}
+                      onClick={() => {
+                        setSelectedType("custom");
+                        setSelectedCustomOffering(offering.id);
+                        setSelectedMinutes(offering.durationMinutes);
+                      }}
+                      className={`
+                        w-full p-4 rounded-lg border-2 text-left transition-all
+                        ${selectedType === "custom" && selectedCustomOffering === offering.id
+                          ? "border-blue-500 bg-blue-500/10"
+                          : "border-gray-600 hover:border-gray-500"
+                        }
+                      `}
+                    >
+                      <div className="font-semibold">{offering.name}</div>
+                      <div className="text-sm text-gray-400">
+                        {offering.durationMinutes} minutes • ${(offering.priceCents / 100).toFixed(2)}
+                      </div>
+                      {offering.description && (
+                        <div className="text-xs text-gray-500 mt-1">{offering.description}</div>
+                      )}
+                    </button>
+                  ))}
+              </>
             )}
           </div>
 
@@ -225,7 +288,11 @@ function NewBookingPageContent() {
               glowColor="orange"
               onClick={handleBook}
             >
-              {selectedType === "free_intro" ? "Book Free Intro" : "Continue to Payment"}
+              {selectedType === "free_intro" 
+                ? "Book Free Intro" 
+                : selectedType === "custom"
+                ? "Continue to Payment"
+                : "Continue to Payment"}
             </GlowButton>
           </div>
         </GradientCard>
@@ -245,3 +312,4 @@ export default function NewBookingPage() {
     </Suspense>
   );
 }
+

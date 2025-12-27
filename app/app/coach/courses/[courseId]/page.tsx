@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { onAuthChange } from "@/lib/firebase/auth";
-import { getCourse, getVideos, getArticles, type CourseData, type VideoData, type ArticleData } from "@/lib/firebase/firestore";
+import { getCourse, getVideos, getArticles, updateCourse, type CourseData, type VideoData, type ArticleData } from "@/lib/firebase/firestore";
 import { User } from "firebase/auth";
 import { where } from "firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
@@ -23,6 +23,7 @@ export default function CourseViewPage() {
   const [videos, setVideos] = useState<(VideoData & { id: string })[]>([]);
   const [articles, setArticles] = useState<(ArticleData & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [publishing, setPublishing] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -93,6 +94,25 @@ export default function CourseViewPage() {
     return Math.round((videoTime + articleTime) / 60);
   };
 
+  const handleTogglePublish = async () => {
+    if (!course) return;
+    
+    setPublishing(true);
+    try {
+      await updateCourse(courseId, {
+        isPublished: !course.isPublished,
+      });
+      // Reload course data
+      await loadCourseData();
+      alert(course.isPublished ? "Course unpublished successfully" : "Course published successfully!");
+    } catch (error) {
+      console.error("Error updating course:", error);
+      alert("Failed to update course status. Please try again.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout role="coach">
@@ -146,9 +166,22 @@ export default function CourseViewPage() {
                 )}
               </div>
             </div>
-            <GlowButton variant="primary" onClick={() => router.push(`/app/coach/courses/${courseId}/edit`)}>
-              Edit Course
-            </GlowButton>
+            <div className="flex gap-3">
+              <button
+                onClick={handleTogglePublish}
+                disabled={publishing}
+                className={`px-4 py-2 rounded-lg border-2 transition-colors ${
+                  course.isPublished
+                    ? "border-yellow-500/30 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20"
+                    : "border-green-500/30 bg-green-500/10 text-green-400 hover:bg-green-500/20"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {publishing ? "Updating..." : course.isPublished ? "Unpublish" : "Publish"}
+              </button>
+              <GlowButton variant="primary" onClick={() => router.push(`/app/coach/courses/${courseId}/edit`)}>
+                Edit Course
+              </GlowButton>
+            </div>
           </div>
 
           {/* Course Thumbnail */}

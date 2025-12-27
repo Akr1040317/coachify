@@ -298,6 +298,26 @@ export default function CoachProfilePage() {
                     <div className="text-2xl font-bold">${price60}</div>
                   </div>
                 )}
+                {/* Custom Offerings */}
+                {coach.customOfferings && coach.customOfferings.filter((o: any) => o.isActive).length > 0 && (
+                  <>
+                    <div className="text-sm text-gray-400 mt-4 mb-2">Custom Offerings</div>
+                    {coach.customOfferings
+                      .filter((o: any) => o.isActive)
+                      .map((offering: any) => (
+                        <div key={offering.id} className="p-3 bg-[var(--card)] rounded-lg">
+                          <div className="font-semibold">{offering.name}</div>
+                          <div className="text-sm text-gray-400 mb-1">{offering.durationMinutes} minutes</div>
+                          <div className="text-2xl font-bold">
+                            {offering.isFree ? "FREE" : `$${(offering.priceCents / 100).toFixed(2)}`}
+                          </div>
+                          {offering.description && (
+                            <div className="text-xs text-gray-500 mt-1">{offering.description}</div>
+                          )}
+                        </div>
+                      ))}
+                  </>
+                )}
               </div>
             </GradientCard>
 
@@ -327,3 +347,4 @@ export default function CoachProfilePage() {
     </div>
   );
 }
+
