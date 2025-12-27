@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createBooking, getBookings } from "@/lib/firebase/firestore";
+import { getCoachDataAdmin } from "@/lib/firebase/firestore-admin";
 import { where, Timestamp } from "firebase/firestore";
 
 export async function POST(request: NextRequest) {
@@ -22,12 +23,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get coach to get free intro duration
-    const { getCoachData } = await import("@/lib/firebase/firestore");
-    const coach = await getCoachData(coachId);
+    // Get coach to get free intro duration (use admin SDK to bypass security rules)
+    const coach = await getCoachDataAdmin(coachId);
     
-    if (!coach || !coach.sessionOffers?.freeIntroEnabled) {
-      return NextResponse.json({ error: "Free intro not available" }, { status: 400 });
+    if (!coach) {
+      return NextResponse.json({ error: "Coach not found" }, { status: 404 });
+    }
+    
+    if (!coach.sessionOffers?.freeIntroEnabled) {
+      return NextResponse.json({ error: "Free intro not available for this coach" }, { status: 400 });
     }
 
     const startTime = Timestamp.fromDate(new Date(scheduledStart));

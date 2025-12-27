@@ -44,6 +44,8 @@ service cloud.firestore {
     match /coaches/{coachId} {
       // Public read access for active coaches OR verified coaches
       allow read: if resource.data.status == "active" || resource.data.isVerified == true;
+      // Authenticated users can read coach data (for booking purposes)
+      allow read: if isAuthenticated();
       // Coaches can read their own data
       allow read: if isOwner(coachId);
       // Coaches can create their own data
@@ -184,6 +186,8 @@ service cloud.firestore {
     }
   }
 }
+
+
 
 
 
