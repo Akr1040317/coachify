@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithGoogle, signUpWithEmail, signInWithEmail, onAuthChange } from "@/lib/firebase/auth";
+import { signInWithGoogle, signUpWithEmail, signInWithEmail, onAuthChange, handleGoogleRedirect } from "@/lib/firebase/auth";
 import { getUserData, createUserData } from "@/lib/firebase/firestore";
 import { User } from "firebase/auth";
 import { GlowButton } from "@/components/ui/GlowButton";
@@ -47,6 +47,36 @@ function AuthPageContent() {
       router.push("/get-started");
     }
   }, [mode, router]);
+
+  // Handle Google OAuth redirect callback
+  useEffect(() => {
+    const checkRedirectResult = async () => {
+      // Check if we're returning from a redirect (URL might have auth params)
+      const urlParams = new URLSearchParams(window.location.search);
+      const hasAuthParams = urlParams.has('code') || urlParams.has('state') || 
+                           window.location.href.includes('__/auth/handler');
+      
+      if (hasAuthParams) {
+        setLoading(true);
+      }
+      
+      try {
+        const user = await handleGoogleRedirect();
+        if (user) {
+          // User returned from redirect, onAuthChange will handle the rest
+          setLoading(true);
+        }
+      } catch (error: any) {
+        console.error("Error handling redirect:", error);
+        if (error.message !== 'REDIRECT_INITIATED') {
+          setError("Failed to complete Google sign in. Please try again.");
+          setLoading(false);
+        }
+      }
+    };
+    
+    checkRedirectResult();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -125,8 +155,15 @@ function AuthPageContent() {
     try {
       await signInWithGoogle();
       // onAuthChange will handle the redirect
+      // Note: If redirect was initiated, this will throw REDIRECT_INITIATED error
+      // and the user will be redirected away, so loading state will persist
     } catch (error: any) {
       console.error("Auth error:", error);
+      // Don't show error if redirect was initiated (user will be redirected away)
+      if (error.message === 'REDIRECT_INITIATED') {
+        // Keep loading state, user is being redirected
+        return;
+      }
       setError(error.message || "Failed to sign in with Google. Please try again.");
       setLoading(false);
     }
@@ -325,4 +362,6 @@ export default function AuthPage() {
     </Suspense>
   );
 }
+
+
 
