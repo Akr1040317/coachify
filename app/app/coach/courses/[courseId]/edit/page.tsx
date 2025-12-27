@@ -15,13 +15,15 @@ import {
   type VideoData,
   type ArticleData,
 } from "@/lib/firebase/firestore";
-import { uploadVideo, uploadVideoThumbnail, uploadArticleCover } from "@/lib/firebase/storage";
+import { uploadVideo, uploadVideoThumbnail, uploadArticleCover, uploadCourseThumbnail } from "@/lib/firebase/storage";
 import { User } from "firebase/auth";
 import { where } from "firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { motion, Reorder } from "framer-motion";
 import Image from "next/image";
+import { formatCurrency, formatCentsForInput, parseCurrencyToCents } from "@/lib/utils/currency";
+import { SKILL_LEVELS, SPORTS } from "@/lib/constants/sports";
 
 interface ContentItem {
   id: string;
@@ -46,6 +48,17 @@ export default function CourseEditPage() {
   const [showAddVideo, setShowAddVideo] = useState(false);
   const [showAddArticle, setShowAddArticle] = useState(false);
   const [showAddExisting, setShowAddExisting] = useState(false);
+  const [showEditDetails, setShowEditDetails] = useState(false);
+  const [priceInputValue, setPriceInputValue] = useState("");
+  const [editingDetails, setEditingDetails] = useState({
+    title: "",
+    description: "",
+    sport: "",
+    skillLevel: "beginner" as "beginner" | "intermediate" | "advanced" | "competitive",
+    priceCents: 0,
+    outcomes: [""],
+    thumbnailFile: null as File | null,
+  });
 
   // New video/article form state
   const [newVideo, setNewVideo] = useState({
@@ -84,6 +97,19 @@ export default function CourseEditPage() {
         return;
       }
       setCourse(courseData as CourseData & { id: string });
+      
+      // Initialize editing details with current course data
+      const priceCents = courseData.priceCents || 0;
+      setEditingDetails({
+        title: courseData.title || "",
+        description: courseData.description || "",
+        sport: courseData.sport || "",
+        skillLevel: courseData.skillLevel || "beginner",
+        priceCents,
+        outcomes: courseData.outcomes && courseData.outcomes.length > 0 ? courseData.outcomes : [""],
+        thumbnailFile: null,
+      });
+      setPriceInputValue(formatCentsForInput(priceCents));
 
       // Load all coach's videos and articles for selection
       const [allVideos, allArticles] = await Promise.all([
@@ -173,6 +199,47 @@ export default function CourseEditPage() {
     } catch (error) {
       console.error("Error saving course:", error);
       alert("Failed to save course. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveDetails = async () => {
+    if (!course || !user) return;
+
+    setSaving(true);
+    try {
+      let thumbnailUrl: string | undefined = course.thumbnailUrl;
+
+      // Upload new thumbnail if provided
+      if (editingDetails.thumbnailFile) {
+        thumbnailUrl = await uploadCourseThumbnail(editingDetails.thumbnailFile, user.uid, courseId);
+      }
+
+      const updateData: any = {
+        title: editingDetails.title,
+        description: editingDetails.description,
+        sport: editingDetails.sport,
+        skillLevel: editingDetails.skillLevel,
+        priceCents: Math.round(editingDetails.priceCents),
+        outcomes: editingDetails.outcomes.filter(Boolean),
+        estimatedMinutes: calculateEstimatedTime(),
+      };
+
+      if (thumbnailUrl) {
+        updateData.thumbnailUrl = thumbnailUrl;
+      }
+
+      await updateCourse(courseId, updateData);
+      
+      // Reload course data
+      await loadCourseData(user.uid);
+      setShowEditDetails(false);
+      
+      alert("Course details updated successfully!");
+    } catch (error) {
+      console.error("Error saving course details:", error);
+      alert("Failed to save course details. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -395,6 +462,42 @@ export default function CourseEditPage() {
               </GlowButton>
             </div>
           </div>
+
+          {/* Course Details Summary */}
+          <GradientCard className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold mb-4">Course Details</h2>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-sm text-gray-400">Title:</span>{" "}
+                    <span className="font-semibold">{course.title}</span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-400">Sport:</span>{" "}
+                    <span className="font-semibold">{course.sport}</span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-400">Skill Level:</span>{" "}
+                    <span className="font-semibold capitalize">{course.skillLevel}</span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-400">Price:</span>{" "}
+                    <span className="font-semibold">{formatCurrency(course.priceCents || 0)}</span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-400">Status:</span>{" "}
+                    <span className={`font-semibold ${course.isPublished ? "text-green-400" : "text-yellow-400"}`}>
+                      {course.isPublished ? "Published" : "Draft"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <GlowButton variant="outline" onClick={() => setShowEditDetails(true)}>
+                Edit Details
+              </GlowButton>
+            </div>
+          </GradientCard>
 
           {/* Add Content Buttons */}
           <div className="flex gap-3 flex-wrap">
@@ -710,9 +813,188 @@ export default function CourseEditPage() {
               </GradientCard>
             </div>
           )}
+
+          {/* Edit Course Details Modal */}
+          {showEditDetails && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <GradientCard className="max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8">
+                <h2 className="text-2xl font-bold mb-6">Edit Course Details</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Title *</label>
+                    <input
+                      type="text"
+                      value={editingDetails.title}
+                      onChange={(e) => setEditingDetails({ ...editingDetails, title: e.target.value })}
+                      className="w-full px-4 py-3 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white"
+                      placeholder="Enter course title"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Description *</label>
+                    <textarea
+                      value={editingDetails.description}
+                      onChange={(e) => setEditingDetails({ ...editingDetails, description: e.target.value })}
+                      rows={5}
+                      className="w-full px-4 py-3 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white"
+                      placeholder="Enter course description"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Sport *</label>
+                    <select
+                      value={editingDetails.sport}
+                      onChange={(e) => setEditingDetails({ ...editingDetails, sport: e.target.value })}
+                      className="w-full px-4 py-3 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white"
+                    >
+                      <option value="">Select a sport</option>
+                      {SPORTS.map((sport) => (
+                        <option key={sport} value={sport}>
+                          {sport}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Skill Level *</label>
+                    <select
+                      value={editingDetails.skillLevel}
+                      onChange={(e) =>
+                        setEditingDetails({
+                          ...editingDetails,
+                          skillLevel: e.target.value as "beginner" | "intermediate" | "advanced" | "competitive",
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white"
+                    >
+                      {SKILL_LEVELS.map((level) => (
+                        <option key={level.toLowerCase()} value={level.toLowerCase()}>
+                          {level}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Price *</label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">$</span>
+                      <input
+                        type="text"
+                        value={priceInputValue}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^0-9.]/g, "");
+                          // Allow empty, single dot, or valid numbers
+                          if (value === "" || value === "." || /^\d*\.?\d*$/.test(value)) {
+                            setPriceInputValue(value);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value.trim();
+                          if (value === "" || value === ".") {
+                            setPriceInputValue("0.00");
+                            setEditingDetails({ ...editingDetails, priceCents: 0 });
+                          } else {
+                            const cents = parseCurrencyToCents(value);
+                            setPriceInputValue(formatCentsForInput(cents));
+                            setEditingDetails({ ...editingDetails, priceCents: cents });
+                          }
+                        }}
+                        className="w-full pl-8 pr-4 py-3 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Current price: {formatCurrency(editingDetails.priceCents)}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Learning Outcomes</label>
+                    <div className="space-y-2">
+                      {editingDetails.outcomes.map((outcome, idx) => (
+                        <div key={idx} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={outcome}
+                            onChange={(e) => {
+                              const newOutcomes = [...editingDetails.outcomes];
+                              newOutcomes[idx] = e.target.value;
+                              setEditingDetails({ ...editingDetails, outcomes: newOutcomes });
+                            }}
+                            className="flex-1 px-4 py-2 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white"
+                            placeholder={`Outcome ${idx + 1}`}
+                          />
+                          {editingDetails.outcomes.length > 1 && (
+                            <button
+                              onClick={() => {
+                                const newOutcomes = editingDetails.outcomes.filter((_, i) => i !== idx);
+                                setEditingDetails({ ...editingDetails, outcomes: newOutcomes });
+                              }}
+                              className="px-3 py-2 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => {
+                          setEditingDetails({ ...editingDetails, outcomes: [...editingDetails.outcomes, ""] });
+                        }}
+                        className="w-full px-4 py-2 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-colors"
+                      >
+                        + Add Outcome
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Thumbnail Image (optional)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setEditingDetails({ ...editingDetails, thumbnailFile: e.target.files?.[0] || null })
+                      }
+                      className="w-full px-4 py-3 bg-[var(--background)] border-2 border-gray-600 rounded-xl text-white"
+                    />
+                    {course.thumbnailUrl && !editingDetails.thumbnailFile && (
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-400 mb-2">Current thumbnail:</p>
+                        <Image
+                          src={course.thumbnailUrl}
+                          alt="Current thumbnail"
+                          width={200}
+                          height={112}
+                          className="rounded-lg"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <GlowButton variant="outline" onClick={() => setShowEditDetails(false)} className="flex-1">
+                      Cancel
+                    </GlowButton>
+                    <GlowButton
+                      variant="primary"
+                      onClick={handleSaveDetails}
+                      disabled={
+                        !editingDetails.title ||
+                        !editingDetails.description ||
+                        !editingDetails.sport ||
+                        saving
+                      }
+                      className="flex-1"
+                    >
+                      {saving ? "Saving..." : "Save Details"}
+                    </GlowButton>
+                  </div>
+                </div>
+              </GradientCard>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>
   );
 }
+
 

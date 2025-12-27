@@ -11,6 +11,7 @@ import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import Image from "next/image";
 import Link from "next/link";
+import { formatCurrency } from "@/lib/utils/currency";
 
 export default function CourseViewPage() {
   const params = useParams();
@@ -136,7 +137,7 @@ export default function CourseViewPage() {
                   {course.skillLevel}
                 </span>
                 <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm border border-green-500/30">
-                  ${(course.priceCents / 100).toFixed(2)}
+                  {formatCurrency(course.priceCents || 0)}
                 </span>
                 {course.estimatedMinutes && (
                   <span className="px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full text-sm border border-orange-500/30">
@@ -244,7 +245,7 @@ export default function CourseViewPage() {
                           </span>
                         ) : (
                           <span className="text-blue-400 font-bold">
-                            ${((video as any).priceCents || 0) / 100}
+                            {formatCurrency((video as any).priceCents || 0)}
                           </span>
                         )}
                       </div>

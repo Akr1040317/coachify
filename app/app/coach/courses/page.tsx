@@ -13,6 +13,7 @@ import { checkStripeConnectStatus } from "@/lib/firebase/stripe-helpers";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { formatCurrency } from "@/lib/utils/currency";
 
 export default function CoachCoursesPage() {
   const router = useRouter();
@@ -269,7 +270,7 @@ export default function CoachCoursesPage() {
                         {/* Price */}
                         <div className="mb-4">
                           <span className="text-2xl font-bold text-blue-400">
-                            ${(course.priceCents / 100).toFixed(2)}
+                            {formatCurrency(course.priceCents || 0)}
                           </span>
                         </div>
                       </div>
@@ -319,4 +320,5 @@ export default function CoachCoursesPage() {
     </DashboardLayout>
   );
 }
+
 
