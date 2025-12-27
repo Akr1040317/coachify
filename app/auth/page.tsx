@@ -53,7 +53,9 @@ function AuthPageContent() {
     const checkRedirectResult = async () => {
       // Check if we're returning from a redirect (URL might have auth params)
       const urlParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const hasAuthParams = urlParams.has('code') || urlParams.has('state') || 
+                           hashParams.has('code') || hashParams.has('state') ||
                            window.location.href.includes('__/auth/handler');
       
       if (hasAuthParams) {
@@ -64,10 +66,25 @@ function AuthPageContent() {
         const user = await handleGoogleRedirect();
         if (user) {
           // User returned from redirect, onAuthChange will handle the rest
-          setLoading(true);
+          // Clear URL params after processing to prevent re-processing
+          window.history.replaceState({}, '', window.location.pathname);
+          // Keep loading state - onAuthChange will redirect
+          return;
+        }
+        // No redirect result
+        if (hasAuthParams) {
+          // If we had auth params but no user, something went wrong
+          // Clear URL params
+          window.history.replaceState({}, '', window.location.pathname);
+          setError("Failed to complete Google sign in. Please try again.");
+          setLoading(false);
         }
       } catch (error: any) {
         console.error("Error handling redirect:", error);
+        // Clear URL params on error
+        if (hasAuthParams) {
+          window.history.replaceState({}, '', window.location.pathname);
+        }
         if (error.message !== 'REDIRECT_INITIATED') {
           setError("Failed to complete Google sign in. Please try again.");
           setLoading(false);
@@ -168,6 +185,18 @@ function AuthPageContent() {
       setLoading(false);
     }
   };
+
+  // Show loading screen during redirect or authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mb-4"></div>
+          <p className="text-gray-400">Signing you in...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--background)]">

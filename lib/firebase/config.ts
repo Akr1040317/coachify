@@ -2,7 +2,7 @@ import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
 import { getFirestore, Firestore } from "firebase/firestore";
 import { getStorage, FirebaseStorage } from "firebase/storage";
-import { getAnalytics, Analytics } from "firebase/analytics";
+import { getAnalytics, Analytics, isSupported } from "firebase/analytics";
 
 // Firebase client config - these values are safe to expose publicly
 // Security is handled by Firebase Security Rules and domain restrictions
@@ -21,21 +21,15 @@ let auth: Auth | undefined;
 let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
 let analytics: Analytics | null = null;
+let analyticsInitialized = false;
 
 // Initialize Firebase for both client and server
 try {
   if (!getApps().length) {
     app = initializeApp(firebaseConfig);
     
-    // Analytics only works on client side
-    if (typeof window !== "undefined") {
-      try {
-        analytics = getAnalytics(app);
-      } catch (error) {
-        // Analytics might fail in development, that's okay
-        console.warn("Analytics initialization failed:", error);
-      }
-    }
+    // Analytics initialization is deferred - will be initialized lazily if supported
+    // This prevents IndexedDB errors in unsupported environments
   } else {
     app = getApps()[0];
   }
@@ -44,6 +38,22 @@ try {
     // Auth only works on client side
     if (typeof window !== "undefined") {
       auth = getAuth(app);
+      
+      // Initialize analytics lazily on client side, checking support first
+      if (!analyticsInitialized) {
+        analyticsInitialized = true;
+        isSupported().then((supported) => {
+          if (supported && app) {
+            try {
+              analytics = getAnalytics(app);
+            } catch (error) {
+              // Silently fail - analytics is optional
+            }
+          }
+        }).catch(() => {
+          // Silently fail if check fails - analytics is optional
+        });
+      }
     }
     // Firestore works on both client and server
     db = getFirestore(app);
@@ -55,5 +65,7 @@ try {
 }
 
 export { app, auth, db, storage, analytics };
+
+
 
 

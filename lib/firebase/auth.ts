@@ -48,12 +48,16 @@ export const handleGoogleRedirect = async (): Promise<User | null> => {
   
   try {
     const result = await getRedirectResult(auth);
-    if (result) {
+    if (result && result.user) {
       return result.user;
     }
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error handling redirect result:", error);
+    // Re-throw auth errors so they can be handled by the caller
+    if (error.code && error.code.startsWith('auth/')) {
+      throw error;
+    }
     return null;
   }
 };
