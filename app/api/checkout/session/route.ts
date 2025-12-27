@@ -4,9 +4,9 @@ import { createConnectCheckoutSession } from "@/lib/firebase/payments";
 
 export async function POST(request: NextRequest) {
   try {
-    const { coachId, sessionMinutes, scheduledStart, bookingType, userId } = await request.json();
+    const { coachId, sessionMinutes, scheduledStart, bookingType, userId, customOfferingId, priceCents } = await request.json();
 
-    if (!coachId || !sessionMinutes || !scheduledStart || !userId) {
+    if (!coachId || !scheduledStart || !userId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -25,29 +25,55 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const sessionOffer = coach.sessionOffers?.paid?.find(p => p.minutes === sessionMinutes);
-    if (!sessionOffer) {
-      return NextResponse.json({ error: "Session type not available" }, { status: 400 });
+    // Handle custom offering
+    let finalPriceCents: number;
+    let finalMinutes: number;
+    let productName: string;
+    let productDescription: string;
+
+    if (customOfferingId && priceCents) {
+      const offering = coach.customOfferings?.find((o: any) => o.id === customOfferingId);
+      if (!offering || !offering.isActive) {
+        return NextResponse.json({ error: "Custom offering not available" }, { status: 400 });
+      }
+      finalPriceCents = priceCents;
+      finalMinutes = offering.durationMinutes;
+      productName = `${offering.name} with ${coach.displayName}`;
+      productDescription = offering.description || `${offering.durationMinutes}-minute custom session`;
+    } else {
+      // Standard session
+      if (!sessionMinutes) {
+        return NextResponse.json({ error: "Missing session minutes" }, { status: 400 });
+      }
+      const sessionOffer = coach.sessionOffers?.paid?.find(p => p.minutes === sessionMinutes);
+      if (!sessionOffer) {
+        return NextResponse.json({ error: "Session type not available" }, { status: 400 });
+      }
+      finalPriceCents = sessionOffer.priceCents;
+      finalMinutes = sessionMinutes;
+      productName = `Coaching Session with ${coach.displayName}`;
+      productDescription = `${sessionMinutes}-minute ${bookingType} session`;
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     
     // Create Stripe Connect checkout session with platform fee
     const checkoutSession = await createConnectCheckoutSession({
-      amountCents: sessionOffer.priceCents,
-      currency: sessionOffer.currency || "usd",
+      amountCents: finalPriceCents,
+      currency: "usd",
       coachId,
-      productName: `Coaching Session with ${coach.displayName}`,
-      productDescription: `${sessionMinutes}-minute ${bookingType} session`,
+      productName,
+      productDescription,
       successUrl: `${baseUrl}/app/student/bookings?success=true`,
       cancelUrl: `${baseUrl}/coach/${coachId}?canceled=true`,
       metadata: {
         userId,
         coachId,
-        sessionMinutes: sessionMinutes.toString(),
+        sessionMinutes: finalMinutes.toString(),
         scheduledStart,
         bookingType,
         type: "session",
+        ...(customOfferingId && { customOfferingId }),
       },
     });
 
@@ -57,4 +83,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
 
