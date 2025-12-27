@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         scheduledEnd: scheduledEnd || new Date(new Date(scheduledStart).getTime() + finalMinutes * 60 * 1000).toISOString(),
         bookingType,
         type: "session",
-        timeZone: timeZone || coach.timezone || coach.timeZone || "America/New_York",
+        timeZone: timeZone || coach.timezone || "America/New_York",
         bufferMinutes: (bufferMinutes || 0).toString(),
         ...(customOfferingId && { customOfferingId }),
       },
