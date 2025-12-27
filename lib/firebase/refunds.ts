@@ -18,8 +18,8 @@ export interface RefundParams {
 export interface RefundResult {
   id: string;
   amount: number;
-  status: string;
-  reason?: string;
+  status: string | null;
+  reason?: string | null;
 }
 
 /**
@@ -95,14 +95,14 @@ export async function createRefund(params: RefundParams): Promise<RefundResult> 
     const refund = await stripe.refunds.create({
       charge: charge.id,
       amount: amountCents,
-      reason: reason === "cancellation" ? "requested_by_customer" : "other",
+      reason: reason === "cancellation" ? "requested_by_customer" : "duplicate",
       metadata: metadata || {},
     });
 
     return {
       id: refund.id,
       amount: refund.amount,
-      status: refund.status,
+      status: refund.status || null,
       reason: refund.reason || undefined,
     };
   } catch (error: any) {

@@ -61,6 +61,7 @@ export interface CoachData {
   bio: string;
   coachingPhilosophy?: string;
   timezone: string;
+  timeZone?: string; // Legacy camelCase support
   location: string;
   sports: string[];
   specialtiesBySport: { [sport: string]: string[] };

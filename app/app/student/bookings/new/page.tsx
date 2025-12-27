@@ -114,7 +114,7 @@ function CalendarView({
           const isSelected = selectedDate === dayString;
           const isPast = day < new Date() && !isToday(day);
           const availableSlots = getAvailableSlotsForDate(day);
-          const hasAvailability = availableSlots > 0 && !isPast && isCurrentMonth;
+          const hasAvailability = (typeof availableSlots === 'number' ? availableSlots : availableSlots.length) > 0 && !isPast && isCurrentMonth;
 
           return (
             <button

@@ -42,6 +42,7 @@ interface RescheduleBookingModalProps {
       durationMinutes: number;
       priceCents: number;
       bufferMinutes?: number;
+      isActive?: boolean;
     }>;
   };
   existingBookings: Array<{
