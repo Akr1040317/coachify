@@ -212,7 +212,7 @@ export default function StudentBookingDetailPage() {
                 </p>
                 {coachTimezone !== studentTimezone && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Coach's timezone: {displayBookingTime(bookingStart, coachTimezone, "h:mm a")} ({coachTimezone})
+                    Coach&apos;s timezone: {displayBookingTime(bookingStart, coachTimezone, "h:mm a")} ({coachTimezone})
                   </p>
                 )}
               </div>
