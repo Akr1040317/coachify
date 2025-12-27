@@ -6,6 +6,7 @@ import {
   createPurchase, 
   updateBooking, 
   getBooking,
+  getCoachData,
   updateCoachData,
   getPurchases,
   type DisputeData
