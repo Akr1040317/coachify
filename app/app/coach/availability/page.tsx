@@ -47,8 +47,6 @@ export default function AvailabilityPage() {
   const [loading, setLoading] = useState(true);
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [bookings, setBookings] = useState<(BookingData & { id: string })[]>([]);
-  const [syncingCalcom, setSyncingCalcom] = useState(false);
-  const [calcomSynced, setCalcomSynced] = useState(false);
   const [timezone, setTimezone] = useState<string>("America/New_York");
   const [availabilityOverrides, setAvailabilityOverrides] = useState<AvailabilityOverride[]>([]);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
@@ -109,9 +107,6 @@ export default function AvailabilityPage() {
         setAvailabilityOverrides(coachData.availabilityOverrides);
       }
 
-      // Check if Cal.com is synced
-      setCalcomSynced(!!coachData?.calcomUserId && !!coachData?.calcomScheduleId);
-      
       // Check if Google Calendar is connected
       setGoogleCalendarConnected(!!coachData?.googleCalendarSyncEnabled && !!coachData?.googleCalendarAccessToken);
 
@@ -209,38 +204,6 @@ export default function AvailabilityPage() {
     }
   };
 
-  const handleSyncCalcom = async () => {
-    if (!user) return;
-
-    setSyncingCalcom(true);
-    try {
-      const response = await fetch("/api/calcom/sync-availability", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          coachId: user.uid,
-          availability,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to sync with Cal.com");
-      }
-
-      const result = await response.json();
-      setCalcomSynced(true);
-      alert("Successfully synced with Cal.com! Your availability is now live.");
-      
-      // Reload coach data to get updated Cal.com IDs
-      await loadData(user.uid);
-    } catch (error: any) {
-      console.error("Error syncing with Cal.com:", error);
-      alert(`Failed to sync with Cal.com: ${error.message}`);
-    } finally {
-      setSyncingCalcom(false);
-    }
-  };
 
   const handleConnectGoogleCalendar = async () => {
     if (!user) return;
@@ -344,23 +307,9 @@ export default function AvailabilityPage() {
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-orange-400 bg-clip-text text-transparent">
               Availability & Calendar
             </h1>
-            <div className="flex gap-3">
-              <GlowButton variant="primary" onClick={handleSaveAvailability}>
-                Save Availability
-              </GlowButton>
-              <GlowButton
-                variant={calcomSynced ? "outline" : "primary"}
-                onClick={handleSyncCalcom}
-                disabled={syncingCalcom}
-                glowColor={calcomSynced ? "green" : "blue"}
-              >
-                {syncingCalcom
-                  ? "Syncing..."
-                  : calcomSynced
-                  ? "✓ Synced with Cal.com"
-                  : "Sync with Cal.com"}
-              </GlowButton>
-            </div>
+            <GlowButton variant="primary" onClick={handleSaveAvailability}>
+              Save Availability
+            </GlowButton>
           </div>
 
           {/* Google Calendar Integration */}

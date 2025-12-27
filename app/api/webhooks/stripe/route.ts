@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       } 
       // Handle booking update or creation
       else if (metadata?.bookingId) {
-        // Update booking status and confirm in Cal.com if applicable
+        // Update booking status
         const booking = await getBooking(metadata.bookingId);
         if (booking) {
           await updateBooking(metadata.bookingId, {
@@ -100,31 +100,6 @@ export async function POST(request: NextRequest) {
             stripePaymentIntentId: paymentIntentId,
           });
 
-          // Confirm booking in Cal.com if it exists
-          if (booking.calcomBookingId) {
-            try {
-              // Convert calcomBookingId to number if it's a string
-              const calcomBookingIdNum = typeof booking.calcomBookingId === 'string' 
-                ? parseInt(booking.calcomBookingId, 10) 
-                : booking.calcomBookingId;
-              
-              if (!isNaN(calcomBookingIdNum)) {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calcom/confirm-booking`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    bookingId: metadata.bookingId,
-                    calcomBookingId: calcomBookingIdNum,
-                  }),
-                });
-                if (!response.ok) {
-                  console.error("Failed to confirm Cal.com booking:", await response.text());
-                }
-              }
-            } catch (error) {
-              console.error("Error confirming Cal.com booking:", error);
-            }
-          }
         }
       } else if (metadata?.coachId && metadata?.scheduledStart) {
         // Create booking for session
