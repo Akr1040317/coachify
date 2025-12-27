@@ -62,34 +62,44 @@ function CoachDashboard({ activeTab = "dashboard", setActiveTab }: CoachDashboar
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
       if (user) {
-      setUser(user);
+        setUser(user);
         setUserId(user.uid);
         try {
-      const coach = await getCoachData(user.uid);
-      setCoachData(coach);
+          const coach = await getCoachData(user.uid);
+          
+          if (!coach) {
+            // Coach document doesn't exist - redirect to onboarding
+            console.log("No coach data found, redirecting to onboarding");
+            setLoading(false);
+            window.location.href = "/onboarding/coach/1";
+            return;
+          }
+          
+          setCoachData(coach);
           
           // Load courses, articles, and videos
-          if (coach) {
-            const [coursesData, articlesData, videosData] = await Promise.all([
-              getCourses([where("coachId", "==", user.uid), where("isPublished", "==", true)]),
-              getArticles([where("authorCoachId", "==", user.uid), where("status", "==", "published")]),
-              getVideos([where("coachId", "==", user.uid), where("isFree", "==", true), where("visibility", "==", "public")]),
-            ]);
-            setCourses(coursesData);
-            setArticles(articlesData);
-            setFreeVideos(videosData.slice(0, 6));
+          const [coursesData, articlesData, videosData] = await Promise.all([
+            getCourses([where("coachId", "==", user.uid), where("isPublished", "==", true)]).catch(() => []),
+            getArticles([where("authorCoachId", "==", user.uid), where("status", "==", "published")]).catch(() => []),
+            getVideos([where("coachId", "==", user.uid), where("isFree", "==", true), where("visibility", "==", "public")]).catch(() => []),
+          ]);
+          setCourses(coursesData);
+          setArticles(articlesData);
+          setFreeVideos(videosData.slice(0, 6));
 
-            // Load Stripe Connect status and pending earnings
-            await loadStripeStatus(user.uid);
-            await loadPendingEarnings(user.uid);
-          }
+          // Load Stripe Connect status and pending earnings (don't block on these)
+          loadStripeStatus(user.uid).catch(err => console.error("Error loading Stripe status:", err));
+          loadPendingEarnings(user.uid).catch(err => console.error("Error loading pending earnings:", err));
         } catch (error) {
           console.error("Error loading coach data:", error);
+          // If there's an error, still set loading to false so user can see something
+          setLoading(false);
         } finally {
           setLoading(false);
         }
       } else {
-      setLoading(false);
+        // No user - redirect to auth
+        window.location.href = "/auth";
       }
     });
 
