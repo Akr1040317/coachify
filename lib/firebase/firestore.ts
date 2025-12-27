@@ -256,8 +256,14 @@ export const getCourses = async (constraints: QueryConstraint[] = []): Promise<(
 
 export const createCourse = async (data: Partial<CourseData>): Promise<string> => {
   if (!db) throw new Error("Firestore is not initialized");
+  
+  // Remove undefined values - Firestore doesn't allow them
+  const cleanedData = Object.fromEntries(
+    Object.entries(data).filter(([_, value]) => value !== undefined)
+  );
+  
   const docRef = await addDoc(collection(db, "courses"), {
-    ...data,
+    ...cleanedData,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });

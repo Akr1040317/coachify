@@ -75,7 +75,7 @@ export default function NewCoursePage() {
         thumbnailUrl = await uploadCourseThumbnail(formData.thumbnailFile, user.uid, `course-${Date.now()}`);
       }
 
-      const courseId = await createCourse({
+      const courseData: any = {
         coachId: user.uid,
         title: formData.title,
         description: formData.description,
@@ -84,12 +84,18 @@ export default function NewCoursePage() {
         skillLevel: formData.skillLevel,
         priceCents: Math.round(formData.priceCents * 100),
         currency: "USD",
-        thumbnailUrl,
-        previewVideoUrl: undefined, // Preview video can be added later if needed
         videoIds: [], // Start with empty arrays - videos/articles added in edit page
         articleIds: [],
         isPublished: false,
-      });
+      };
+      
+      // Only include thumbnailUrl if it exists
+      if (thumbnailUrl) {
+        courseData.thumbnailUrl = thumbnailUrl;
+      }
+      // Preview video can be added later - don't include undefined
+      
+      const courseId = await createCourse(courseData);
 
       router.push(`/app/coach/courses/${courseId}/edit`);
     } catch (error) {
@@ -309,4 +315,5 @@ export default function NewCoursePage() {
     </DashboardLayout>
   );
 }
+
 
