@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
 import { getBookings, getCoachData, type BookingData } from "@/lib/firebase/firestore";
@@ -13,9 +13,11 @@ import { format } from "date-fns";
 
 export default function StudentBookingsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [bookings, setBookings] = useState<(BookingData & { id: string; coachName?: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -25,10 +27,19 @@ export default function StudentBookingsPage() {
       }
       setUser(user);
       await loadBookings(user.uid);
+      
+      // Check for success parameter
+      if (searchParams.get("success") === "true") {
+        setShowSuccess(true);
+        // Remove success parameter from URL
+        router.replace("/app/student/bookings");
+        // Hide success message after 5 seconds
+        setTimeout(() => setShowSuccess(false), 5000);
+      }
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, searchParams]);
 
   const loadBookings = async (studentId: string) => {
     setLoading(true);
@@ -54,10 +65,10 @@ export default function StudentBookingsPage() {
   };
 
   const upcomingBookings = bookings.filter(
-    (b) => b.status === "confirmed" && b.scheduledStart.toDate() > new Date()
+    (b) => (b.status === "confirmed" || b.status === "requested") && b.scheduledStart.toDate() > new Date()
   );
   const pastBookings = bookings.filter(
-    (b) => b.status === "completed" || b.scheduledStart.toDate() < new Date()
+    (b) => b.status === "completed" || (b.scheduledStart.toDate() < new Date() && b.status !== "cancelled")
   );
 
   return (
@@ -71,6 +82,12 @@ export default function StudentBookingsPage() {
             </GlowButton>
           </Link>
         </div>
+
+        {showSuccess && (
+          <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400">
+            ✓ Payment successful! Your booking has been confirmed.
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-12 text-gray-400">Loading bookings...</div>
@@ -140,4 +157,6 @@ export default function StudentBookingsPage() {
     </div>
   );
 }
+
+
 

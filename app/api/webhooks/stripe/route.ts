@@ -104,6 +104,13 @@ export async function POST(request: NextRequest) {
         }
       } else if (metadata?.coachId && metadata?.scheduledStart) {
         // Create booking for session
+        console.log("Creating booking from checkout session:", {
+          sessionId: session.id,
+          userId,
+          coachId: metadata.coachId,
+          scheduledStart: metadata.scheduledStart,
+        });
+
         const scheduledStart = Timestamp.fromDate(new Date(metadata.scheduledStart));
         const sessionMinutes = parseInt(metadata.sessionMinutes || "60");
         const scheduledEnd = metadata.scheduledEnd
@@ -122,10 +129,12 @@ export async function POST(request: NextRequest) {
           sessionMinutes,
           priceCents: session.amount_total || 0,
           currency: session.currency || "usd",
-          status: "requested", // Coach needs to confirm
+          status: "confirmed", // Payment successful, booking confirmed
+          paymentStatus: "paid",
           scheduledStart,
           scheduledEnd,
           stripeCheckoutSessionId: session.id,
+          stripePaymentIntentId: paymentIntentId,
           customOfferingId: metadata.customOfferingId,
           timeZone,
           bufferMinutes,
@@ -135,6 +144,8 @@ export async function POST(request: NextRequest) {
             partialRefundPercent: 50,
           },
         });
+
+        console.log("Booking created successfully:", { bookingId, userId, coachId: metadata.coachId });
 
         // Sync booking to Google Calendar if enabled
         try {
@@ -148,6 +159,13 @@ export async function POST(request: NextRequest) {
           console.error("Error syncing booking to Google Calendar:", error);
           // Don't fail the booking if Google Calendar sync fails
         }
+      } else {
+        console.warn("Checkout session completed but no booking created - missing metadata:", {
+          hasBookingId: !!metadata?.bookingId,
+          hasCoachId: !!metadata?.coachId,
+          hasScheduledStart: !!metadata?.scheduledStart,
+          metadata,
+        });
       }
     }
 
