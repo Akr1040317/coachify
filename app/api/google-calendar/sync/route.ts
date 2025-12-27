@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
           booking.googleCalendarEventId
         );
         await updateBooking(bookingId, {
-          googleCalendarEventId: null,
+          googleCalendarEventId: undefined,
         });
       }
       return NextResponse.json({ success: true, action: "deleted" });
@@ -211,4 +211,6 @@ async function deleteGoogleCalendarEvent(
     throw new Error(`Failed to delete Google Calendar event: ${error}`);
   }
 }
+
+
 

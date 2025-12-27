@@ -86,7 +86,7 @@ function NewBookingPageContent() {
     if (!date || !coach) return [];
     
     const selectedDateObj = new Date(date);
-    const coachTimezone = coach.timezone || coach.timeZone || "America/New_York";
+    const coachTimezone = coach.timezone || "America/New_York";
     
     // Get effective availability (weekly + overrides)
     const effectiveAvailability = getEffectiveAvailability(
@@ -150,7 +150,7 @@ function NewBookingPageContent() {
       return;
     }
 
-    const coachTimezone = coach.timezone || coach.timeZone || "America/New_York";
+    const coachTimezone = coach.timezone || "America/New_York";
     
     // Convert selected time back to coach's timezone for storage
     // The selectedTime is in student's timezone, we need to convert it to coach's timezone
@@ -399,7 +399,7 @@ function NewBookingPageContent() {
                   setSelectedDate(date);
                   setSelectedTime(""); // Reset time when date changes
                 }}
-                coachTimezone={coach?.timezone || coach?.timeZone}
+                coachTimezone={coach?.timezone}
                 minDate={new Date()}
                 maxDate={addDays(new Date(), 90)} // Allow booking up to 90 days ahead
               />
@@ -426,7 +426,7 @@ function NewBookingPageContent() {
                   <label className="block text-sm font-medium">Available Times</label>
                   {coach?.timezone && (
                     <span className="text-xs text-gray-400">
-                      Times in {Intl.DateTimeFormat(undefined, { timeZone: coach.timezone || coach.timeZone || "UTC", timeZoneName: "short" }).formatToParts(new Date()).find(part => part.type === "timeZoneName")?.value || coach.timezone}
+                      Times in {Intl.DateTimeFormat(undefined, { timeZone: coach.timezone || "UTC", timeZoneName: "short" }).formatToParts(new Date()).find(part => part.type === "timeZoneName")?.value || coach.timezone}
                     </span>
                   )}
                 </div>

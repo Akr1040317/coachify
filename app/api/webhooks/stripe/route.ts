@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
 
         // Get coach to get timezone
         const coach = await getCoachData(metadata.coachId);
-        const timeZone = metadata.timeZone || coach?.timezone || coach?.timeZone || "America/New_York";
+        const timeZone = metadata.timeZone || coach?.timezone || "America/New_York";
         const bufferMinutes = parseInt(metadata.bufferMinutes || "0");
 
         const bookingId = await createBooking({

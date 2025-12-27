@@ -97,9 +97,6 @@ export default function AvailabilityPage() {
       // Load timezone
       if (coachData?.timezone) {
         setTimezone(coachData.timezone);
-      } else if (coachData?.timeZone) {
-        // Handle legacy camelCase
-        setTimezone(coachData.timeZone);
       }
 
       // Load availability overrides
