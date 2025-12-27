@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBooking, updateBooking } from "@/lib/firebase/firestore";
 import { calcomClient } from "@/lib/calcom/client";
+import { Timestamp } from "firebase/firestore";
 
 /**
  * Reschedule a booking
@@ -26,11 +27,21 @@ export async function POST(request: NextRequest) {
     // Reschedule booking in Cal.com
     let rescheduledBooking;
     if (booking.calcomBookingId) {
-      rescheduledBooking = await calcomClient.rescheduleBooking(
-        booking.calcomBookingId,
-        newStartTime,
-        newEndTime
-      );
+      try {
+        const calcomBookingIdNum = typeof booking.calcomBookingId === 'string' 
+          ? parseInt(booking.calcomBookingId, 10) 
+          : booking.calcomBookingId;
+        if (!isNaN(calcomBookingIdNum)) {
+          rescheduledBooking = await calcomClient.rescheduleBooking(
+            calcomBookingIdNum,
+            newStartTime,
+            newEndTime
+          );
+        }
+      } catch (error) {
+        console.error("Error rescheduling Cal.com booking:", error);
+        // Continue with local reschedule even if Cal.com fails
+      }
     }
 
     // Handle price difference refund if needed
@@ -42,7 +53,7 @@ export async function POST(request: NextRequest) {
       booking.stripePaymentIntentId
     ) {
       try {
-        const { createRefund } = await import("@/lib/firebase/payments");
+        const { createRefund } = await import("@/lib/firebase/refunds");
         refundResult = await createRefund({
           paymentIntentId: booking.stripePaymentIntentId,
           amountCents: refundDifference,
@@ -60,12 +71,13 @@ export async function POST(request: NextRequest) {
 
     // Update booking in Firestore
     await updateBooking(bookingId, {
-      scheduledStart: new Date(newStartTime),
-      scheduledEnd: new Date(newEndTime),
-      rescheduledAt: new Date(),
+      scheduledStart: Timestamp.fromDate(new Date(newStartTime)),
+      scheduledEnd: Timestamp.fromDate(new Date(newEndTime)),
+      rescheduledAt: Timestamp.now(),
       rescheduleReason: reason,
       refundId: refundResult?.id,
-      calcomBookingId: rescheduledBooking?.id || booking.calcomBookingId,
+      refundAmountCents: refundResult?.amount,
+      calcomBookingId: rescheduledBooking?.id?.toString() || booking.calcomBookingId,
     });
 
     return NextResponse.json({

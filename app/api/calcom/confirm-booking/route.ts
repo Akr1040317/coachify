@@ -24,13 +24,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Confirm booking in Cal.com
-    const confirmedBooking = await calcomClient.confirmBooking(calcomBookingId);
+    const calcomBookingIdNum = typeof calcomBookingId === 'string' 
+      ? parseInt(calcomBookingId, 10) 
+      : calcomBookingId;
+    
+    if (isNaN(calcomBookingIdNum)) {
+      return NextResponse.json(
+        { error: "Invalid calcomBookingId" },
+        { status: 400 }
+      );
+    }
+    
+    const confirmedBooking = await calcomClient.confirmBooking(calcomBookingIdNum);
 
     // Update booking in Firestore
     await updateBooking(bookingId, {
       status: "confirmed",
       paymentStatus: "paid",
-      calcomBookingId: confirmedBooking.id,
+      calcomBookingId: confirmedBooking.id.toString(),
     });
 
     return NextResponse.json({
