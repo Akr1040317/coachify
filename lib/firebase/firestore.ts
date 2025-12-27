@@ -129,17 +129,32 @@ export const getUserData = async (uid: string, useCache: boolean = true): Promis
       if (cachedSnap.exists()) {
         return cachedSnap.data() as UserData;
       }
+      // Document doesn't exist in cache - try network
     } catch (error) {
       // Cache miss or error - fall through to network request
+      // This is expected for new users or when cache is empty
     }
   }
   
-  // Network request
-  const docSnap = await getDoc(docRef);
-  if (docSnap.exists()) {
-    return docSnap.data() as UserData;
+  // Network request - this will return null (not error) if document doesn't exist
+  // Permission errors are handled by the caller
+  try {
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as UserData;
+    }
+    return null;
+  } catch (error: any) {
+    // If it's a permission error and document doesn't exist, return null (new user)
+    // Otherwise re-throw the error
+    if (error.code === "permission-denied" || error.code === "permissions-denied") {
+      // For new users, permission denied might mean document doesn't exist yet
+      // Return null to indicate no user data (will redirect to get-started)
+      console.log("Permission denied reading user data - likely new user");
+      return null;
+    }
+    throw error;
   }
-  return null;
 };
 
 export const createUserData = async (uid: string, data: Partial<UserData>): Promise<void> => {

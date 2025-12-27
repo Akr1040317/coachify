@@ -71,9 +71,9 @@ function AuthPageContent() {
       }
       
       try {
-        // Add timeout for redirect handling
+        // Add timeout for redirect handling (increased for production)
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('REDIRECT_TIMEOUT')), 8000)
+          setTimeout(() => reject(new Error('REDIRECT_TIMEOUT')), 15000)
         );
         
         const redirectPromise = handleGoogleRedirect();
@@ -104,7 +104,15 @@ function AuthPageContent() {
           if (hasAuthParams) {
             window.history.replaceState({}, '', window.location.pathname);
           }
-          // Let onAuthChange handle it - user might still be authenticated
+          // Check if user is authenticated despite timeout
+          if (auth && auth.currentUser) {
+            // User is authenticated, let onAuthChange handle redirect
+            setLoading(true);
+            return;
+          }
+          // Not authenticated, show error
+          setError("Sign in timed out. Please try again.");
+          setLoading(false);
           return;
         }
         
@@ -156,20 +164,26 @@ function AuthPageContent() {
           if (fetchError.message === 'TIMEOUT') {
             // Try to redirect anyway - user is authenticated, just data fetch timed out
             // They can retry from dashboard if needed
-            console.warn("User data fetch timed out, redirecting to dashboard");
-            router.push("/app/student/dashboard"); // Default fallback
+            console.warn("User data fetch timed out, redirecting to get-started");
+            router.push("/get-started"); // Redirect new users to signup flow
             setLoading(false);
             return;
           }
           
-          // If it's a permissions error, show helpful message
-          if (fetchError.code === "permission-denied" || fetchError.message?.includes("permission")) {
-            setError(
-              "Firestore security rules not deployed. Please deploy firestore.rules using: firebase deploy --only firestore:rules"
-            );
-          } else {
-            setError("Failed to load user data. Please try again.");
+          // Handle permission denied - this usually means new user (document doesn't exist)
+          if (fetchError.code === "permission-denied" || 
+              fetchError.code === "permissions-denied" ||
+              fetchError.message?.includes("permission") ||
+              fetchError.message?.includes("Missing or insufficient permissions")) {
+            // For new users, permission denied is expected - redirect to get-started
+            console.log("Permission denied - likely new user, redirecting to get-started");
+            router.push("/get-started");
+            setLoading(false);
+            return;
           }
+          
+          // Other errors - show error message
+          setError("Failed to load user data. Please try again.");
           setLoading(false);
         }
       } else {
