@@ -235,8 +235,8 @@ export default function AvailabilityPage() {
     try {
       await updateCoachData(user.uid, {
         googleCalendarSyncEnabled: false,
-        googleCalendarAccessToken: null,
-        googleCalendarRefreshToken: null,
+        googleCalendarAccessToken: undefined,
+        googleCalendarRefreshToken: undefined,
       });
       setGoogleCalendarConnected(false);
       alert("Google Calendar disconnected successfully.");
