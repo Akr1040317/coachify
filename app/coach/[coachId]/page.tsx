@@ -305,16 +305,25 @@ export default function CoachProfilePage() {
                     {coach.customOfferings
                       .filter((o: any) => o.isActive)
                       .map((offering: any) => (
-                        <div key={offering.id} className="p-3 bg-[var(--card)] rounded-lg">
-                          <div className="font-semibold">{offering.name}</div>
-                          <div className="text-sm text-gray-400 mb-1">{offering.durationMinutes} minutes</div>
-                          <div className="text-2xl font-bold">
-                            {offering.isFree ? "FREE" : `$${(offering.priceCents / 100).toFixed(2)}`}
+                        <Link
+                          key={offering.id}
+                          href={`/app/student/bookings/new?coachId=${coachId}&offeringId=${offering.id}`}
+                          className="block"
+                        >
+                          <div className="p-3 bg-[var(--card)] rounded-lg hover:bg-[var(--card)]/80 transition-colors cursor-pointer border-2 border-transparent hover:border-blue-500/30">
+                            <div className="font-semibold">{offering.name}</div>
+                            <div className="text-sm text-gray-400 mb-1">{offering.durationMinutes} minutes</div>
+                            <div className="text-2xl font-bold">
+                              {offering.isFree ? "FREE" : `$${(offering.priceCents / 100).toFixed(2)}`}
+                            </div>
+                            {offering.description && (
+                              <div className="text-xs text-gray-500 mt-1">{offering.description}</div>
+                            )}
+                            {!offering.isFree && (
+                              <div className="mt-2 text-xs text-blue-400">Click to book →</div>
+                            )}
                           </div>
-                          {offering.description && (
-                            <div className="text-xs text-gray-500 mt-1">{offering.description}</div>
-                          )}
-                        </div>
+                        </Link>
                       ))}
                   </>
                 )}

@@ -13,6 +13,7 @@ function NewBookingPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const coachId = searchParams.get("coachId");
+  const offeringId = searchParams.get("offeringId");
   const [user, setUser] = useState<User | null>(null);
   const [coach, setCoach] = useState<any>(null);
   const [selectedType, setSelectedType] = useState<"free_intro" | "paid" | "custom">("free_intro");
@@ -35,13 +36,27 @@ function NewBookingPageContent() {
     });
 
     return () => unsubscribe();
-  }, [router, coachId]);
+  }, [router, coachId, offeringId]);
 
   const loadCoach = async (id: string) => {
     setLoading(true);
     try {
       const coachData = await getCoachData(id);
       setCoach(coachData);
+      
+      // If offeringId is provided, auto-select that offering
+      if (offeringId && coachData?.customOfferings) {
+        const offering = coachData.customOfferings.find((o: any) => o.id === offeringId && o.isActive);
+        if (offering) {
+          if (offering.isFree) {
+            setSelectedType("free_intro");
+          } else {
+            setSelectedType("custom");
+            setSelectedCustomOffering(offering.id);
+            setSelectedMinutes(offering.durationMinutes);
+          }
+        }
+      }
     } catch (error) {
       console.error("Error loading coach:", error);
     } finally {
