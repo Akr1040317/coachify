@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "build:check": "next build && echo '✓ Build successful - no errors found'",
+    "type-check": "tsc --noEmit",
     "start": "next start",
     "lint": "next lint"
   },
@@ -13,7 +14,7 @@
     "@hookform/resolvers": "^3.3.4",
     "@stripe/stripe-js": "^2.4.0",
     "date-fns": "^3.3.0",
-    "date-fns-tz": "^3.1.1",
+    "date-fns-tz": "^3.2.0",
     "firebase": "^10.12.0",
     "firebase-admin": "^13.6.0",
     "framer-motion": "^11.0.0",

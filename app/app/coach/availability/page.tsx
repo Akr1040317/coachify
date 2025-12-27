@@ -328,7 +328,7 @@ export default function AvailabilityPage() {
                   <GlowButton
                     variant="outline"
                     onClick={handleDisconnectGoogleCalendar}
-                    glowColor="red"
+                    glowColor="purple"
                   >
                     Disconnect
                   </GlowButton>
@@ -564,7 +564,7 @@ export default function AvailabilityPage() {
                             {bookingDate.toLocaleDateString()} at {bookingDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </div>
                           <div className="text-sm text-gray-400">
-                            Duration: {booking.durationMinutes || 30} minutes
+                            Duration: {booking.sessionMinutes || 30} minutes
                           </div>
                           {booking.customOfferingId && (
                             <div className="text-sm text-gray-400">

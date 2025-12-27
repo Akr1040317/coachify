@@ -41,6 +41,7 @@ interface RescheduleBookingModalProps {
       name: string;
       durationMinutes: number;
       priceCents: number;
+      isActive: boolean;
       bufferMinutes?: number;
     }>;
   };

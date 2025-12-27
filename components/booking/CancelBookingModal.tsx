@@ -171,7 +171,7 @@ export function CancelBookingModal({
                     onClick={handleConfirm}
                     disabled={loading}
                     className="flex-1"
-                    glowColor="red"
+                    glowColor="purple"
                   >
                     {loading ? "Cancelling..." : "Cancel Booking"}
                   </GlowButton>
@@ -184,5 +184,7 @@ export function CancelBookingModal({
     </AnimatePresence>
   );
 }
+
+
 
 
