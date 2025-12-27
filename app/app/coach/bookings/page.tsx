@@ -180,11 +180,11 @@ export default function CoachBookingsPage() {
     switch (filterStatus) {
       case "upcoming":
         return bookings.filter(
-          (b) => b.status === "confirmed" && b.scheduledStart.toDate() > now
+          (b) => (b.status === "confirmed" || b.status === "requested") && b.scheduledStart.toDate() > now
         );
       case "past":
         return bookings.filter(
-          (b) => b.status === "completed" || b.scheduledStart.toDate() < now || b.status === "cancelled"
+          (b) => b.status === "completed" || (b.status === "cancelled") || (b.status === "confirmed" && b.scheduledStart.toDate() < now)
         );
       case "today":
         return bookings.filter((b) => isSameDay(b.scheduledStart.toDate(), now));

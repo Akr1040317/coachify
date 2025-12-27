@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
 import { getBookings, getCoachData, type BookingData } from "@/lib/firebase/firestore";
@@ -11,13 +11,16 @@ import { GlowButton } from "@/components/ui/GlowButton";
 import Link from "next/link";
 import { format } from "date-fns";
 import { displayBookingTime, getUserTimezone } from "@/lib/utils/timezone";
+import { motion, AnimatePresence } from "framer-motion";
 
-export default function StudentBookingsPage() {
+function StudentBookingsPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [bookings, setBookings] = useState<(BookingData & { id: string; coachName?: string; coachTimezone?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [studentTimezone, setStudentTimezone] = useState<string>("UTC");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -32,6 +35,17 @@ export default function StudentBookingsPage() {
 
     return () => unsubscribe();
   }, [router]);
+
+  // Check for success query parameter
+  useEffect(() => {
+    if (searchParams?.get("success") === "true") {
+      setShowSuccess(true);
+      // Remove query parameter from URL
+      router.replace("/app/student/bookings");
+      // Hide success message after 5 seconds
+      setTimeout(() => setShowSuccess(false), 5000);
+    }
+  }, [searchParams, router]);
 
   const loadBookings = async (studentId: string) => {
     setLoading(true);
@@ -61,10 +75,10 @@ export default function StudentBookingsPage() {
   };
 
   const upcomingBookings = bookings.filter(
-    (b) => b.status === "confirmed" && b.scheduledStart.toDate() > new Date()
+    (b) => (b.status === "confirmed" || b.status === "requested") && b.scheduledStart.toDate() > new Date()
   );
   const pastBookings = bookings.filter(
-    (b) => b.status === "completed" || b.scheduledStart.toDate() < new Date()
+    (b) => b.status === "completed" || (b.status === "cancelled") || (b.status === "confirmed" && b.scheduledStart.toDate() < new Date())
   );
 
   return (
@@ -78,6 +92,28 @@ export default function StudentBookingsPage() {
             </GlowButton>
           </Link>
         </div>
+
+        {/* Success Message */}
+        <AnimatePresence>
+          {showSuccess && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-lg"
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-green-400 font-semibold">Booking Confirmed!</p>
+                  <p className="text-green-300 text-sm">Your session has been successfully booked and payment processed.</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {loading ? (
           <div className="text-center py-12 text-gray-400">Loading bookings...</div>
@@ -106,8 +142,14 @@ export default function StudentBookingsPage() {
                               {booking.sessionMinutes} minutes • {booking.type === "free_intro" ? "Free Intro" : `$${booking.priceCents / 100}`}
                             </p>
                           </div>
-                          <div className="px-4 py-2 bg-blue-500/20 text-blue-400 rounded-full">
-                            {booking.status}
+                          <div className={`px-4 py-2 rounded-full text-sm font-medium ${
+                            booking.status === "confirmed"
+                              ? "bg-green-500/20 text-green-400"
+                              : booking.status === "requested"
+                              ? "bg-yellow-500/20 text-yellow-400"
+                              : "bg-blue-500/20 text-blue-400"
+                          }`}>
+                            {booking.status === "confirmed" ? "Confirmed" : booking.status === "requested" ? "Pending" : booking.status}
                           </div>
                         </div>
                       </GradientCard>
@@ -155,5 +197,15 @@ export default function StudentBookingsPage() {
   );
 }
 
-
+export default function StudentBookingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    }>
+      <StudentBookingsPageContent />
+    </Suspense>
+  );
+}
 

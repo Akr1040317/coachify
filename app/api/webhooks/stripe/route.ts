@@ -120,10 +120,11 @@ export async function POST(request: NextRequest) {
           sessionMinutes,
           priceCents: session.amount_total || 0,
           currency: session.currency || "usd",
-          status: "requested", // Coach needs to confirm
+          status: "confirmed", // Payment successful, booking confirmed
           scheduledStart,
           scheduledEnd,
           stripeCheckoutSessionId: session.id,
+          stripePaymentIntentId: paymentIntentId,
           customOfferingId: metadata.customOfferingId,
           timeZone,
           bufferMinutes,

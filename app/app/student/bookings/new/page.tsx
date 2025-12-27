@@ -539,14 +539,21 @@ function NewBookingPageContent() {
                     setSelectedTime(""); // Reset time when date changes
                   }}
                   min={new Date().toISOString().split("T")[0]}
-                  className="flex-1 px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white"
+                  className="flex-1 px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowCalendar(!showCalendar)}
-                  className="px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white hover:border-gray-500 transition-colors"
+                  className={`px-4 py-3 bg-[var(--background)] border rounded-lg text-white transition-all ${
+                    showCalendar 
+                      ? "border-blue-500 bg-blue-500/10" 
+                      : "border-gray-600 hover:border-gray-500"
+                  }`}
+                  title="Toggle calendar view"
                 >
-                  📅
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
                 </button>
               </div>
               {coach && (
@@ -580,24 +587,29 @@ function NewBookingPageContent() {
 
             {selectedDate && (
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-sm font-medium mb-3">
                   Available Times ({studentTimezone})
                 </label>
                 {availableSlots.length === 0 ? (
-                  <p className="text-sm text-gray-400 py-4">
-                    No available slots for this date. Please select another date.
-                  </p>
+                  <div className="p-6 bg-gray-800/30 border border-gray-700 rounded-lg text-center">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm text-gray-400">
+                      No available slots for this date. Please select another date.
+                    </p>
+                  </div>
                 ) : (
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
                     {availableSlots.map((slot) => (
                       <button
                         key={slot}
                         onClick={() => setSelectedTime(slot)}
                         className={`
-                          px-3 py-2 rounded-lg border-2 transition-all text-sm
+                          px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium
                           ${selectedTime === slot
-                            ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                            : "border-gray-600 hover:border-gray-500 text-gray-300"
+                            ? "border-blue-500 bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/20 scale-105"
+                            : "border-gray-600 hover:border-gray-500 hover:bg-gray-700/30 text-gray-300 hover:scale-102"
                           }
                         `}
                       >
