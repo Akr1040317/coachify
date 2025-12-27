@@ -54,14 +54,36 @@ export default function OfferingsPage() {
     const unsubscribe = onAuthChange(async (user: User | null) => {
       if (user) {
         setUser(user);
-        await loadOfferings(user.uid);
+        await Promise.all([
+          loadOfferings(user.uid),
+          loadStripeStatus(user.uid)
+        ]);
       } else {
         setLoading(false);
+        setCheckingStripe(false);
       }
     });
 
     return () => unsubscribe();
   }, []);
+
+  const loadStripeStatus = async (coachId: string) => {
+    try {
+      const status = await checkStripeConnectStatus(coachId);
+      setStripeStatus(status);
+    } catch (error) {
+      console.error("Error loading Stripe status:", error);
+      // Set default status on error so page can still render
+      setStripeStatus({
+        hasAccount: false,
+        status: "not_setup",
+        chargesEnabled: false,
+        payoutsEnabled: false,
+      });
+    } finally {
+      setCheckingStripe(false);
+    }
+  };
 
   const loadOfferings = async (coachId: string) => {
     setLoading(true);
@@ -80,11 +102,17 @@ export default function OfferingsPage() {
       console.error("Error loading offerings:", error);
       } finally {
       setLoading(false);
-      setCheckingStripe(false);
     }
   };
 
   const handleCreateOffering = () => {
+    const canCreate = stripeStatus?.status === "active" && stripeStatus?.chargesEnabled && stripeStatus?.payoutsEnabled;
+    
+    if (!canCreate) {
+      setShowPaymentModal(true);
+      return;
+    }
+    
     setEditingOffering(null);
     setFormData({
       name: "",
@@ -199,7 +227,21 @@ export default function OfferingsPage() {
   });
 
   // Check if Stripe Connect is set up
-  const canCreateOfferings = stripeStatus?.status === "active" && stripeStatus?.chargesEnabled && stripeStatus?.payoutsEnabled;
+  const canCreateOfferings = checkingStripe 
+    ? false // Don't enable until we've checked
+    : (stripeStatus?.status === "active" && stripeStatus?.chargesEnabled && stripeStatus?.payoutsEnabled);
+
+  if (loading || checkingStripe) {
+    return (
+      <DashboardLayout role="coach">
+        <div className="min-h-[calc(100vh-64px)] p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center py-12 text-gray-400">Loading...</div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role="coach">
@@ -229,7 +271,7 @@ export default function OfferingsPage() {
               >
                 + Create Offering
               </GlowButton>
-              {!canCreateOfferings && (
+              {!canCreateOfferings && !checkingStripe && (
                 <p className="text-xs text-orange-400 text-center">
                   Complete payment setup to create offerings
                 </p>
@@ -573,4 +615,5 @@ export default function OfferingsPage() {
     </DashboardLayout>
   );
 }
+
 
