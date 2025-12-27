@@ -28,7 +28,12 @@ export async function POST(request: NextRequest) {
     // Cancel booking in Cal.com
     if (booking.calcomBookingId) {
       try {
-        await calcomClient.cancelBooking(booking.calcomBookingId, reason);
+        const calcomBookingIdNum = typeof booking.calcomBookingId === 'string' 
+          ? parseInt(booking.calcomBookingId, 10) 
+          : booking.calcomBookingId;
+        if (!isNaN(calcomBookingIdNum)) {
+          await calcomClient.cancelBooking(calcomBookingIdNum, reason);
+        }
       } catch (error) {
         console.error("Error canceling Cal.com booking:", error);
         // Continue with local cancellation even if Cal.com fails
