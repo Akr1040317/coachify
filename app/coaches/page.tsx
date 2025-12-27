@@ -29,20 +29,31 @@ export default function CoachesPage() {
   const loadCoaches = async () => {
     setLoading(true);
     try {
-      const constraints: any[] = [where("status", "==", "active")];
+      // Get all coaches and filter client-side to show active OR verified coaches
+      // (Firestore doesn't support OR queries easily, so we fetch and filter)
+      const constraints: any[] = [];
       
       if (filters.sport) {
         constraints.push(where("sports", "array-contains", filters.sport));
       }
-      
-      if (filters.verified) {
-        constraints.push(where("isVerified", "==", true));
-      }
 
       const coachesData = await getCoaches(constraints);
       
+      // Filter to show coaches that are either active OR verified
+      // This ensures verified coaches show up even if status is pending_verification
+      let filtered = coachesData.filter(coach => {
+        const isActive = coach.status === "active";
+        const isVerified = coach.isVerified === true;
+        return isActive || isVerified;
+      });
+      
+      // Apply verified filter if checked
+      if (filters.verified) {
+        filtered = filtered.filter(coach => coach.isVerified === true);
+      }
+      
       // Filter by price client-side
-      const filtered = coachesData.filter(coach => {
+      filtered = filtered.filter(coach => {
         const minPrice = coach.sessionOffers?.paid?.[0]?.priceCents ? coach.sessionOffers.paid[0].priceCents / 100 : 0;
         return minPrice >= filters.minPrice && minPrice <= filters.maxPrice;
       });
@@ -198,3 +209,4 @@ export default function CoachesPage() {
     </div>
   );
 }
+
