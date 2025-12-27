@@ -74,13 +74,32 @@ function AuthPageContent() {
       
       try {
         // Call getRedirectResult immediately - it's safe to call even if no redirect happened
-        // Reduce timeout to 10 seconds (more reasonable)
+        // Use a longer timeout (15 seconds) and then check auth state
+        const redirectPromise = handleGoogleRedirect();
         const timeoutPromise = new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('REDIRECT_TIMEOUT')), 10000)
+          setTimeout(() => reject(new Error('REDIRECT_TIMEOUT')), 15000)
         );
         
-        const redirectPromise = handleGoogleRedirect();
-        const user = await Promise.race([redirectPromise, timeoutPromise]);
+        let user;
+        try {
+          user = await Promise.race([redirectPromise, timeoutPromise]);
+        } catch (timeoutError: any) {
+          // If timeout, check if auth completed in the background
+          if (timeoutError.message === 'REDIRECT_TIMEOUT') {
+            // Wait a bit more and check auth state
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            if (auth && auth.currentUser) {
+              // Auth completed! Clear URL and let onAuthChange handle redirect
+              if (hasAuthParams) {
+                window.history.replaceState({}, '', window.location.pathname);
+              }
+              setLoading(true);
+              return;
+            }
+            throw timeoutError;
+          }
+          throw timeoutError;
+        }
         
         if (user) {
           // User returned from redirect successfully
@@ -94,8 +113,15 @@ function AuthPageContent() {
         
         // No redirect result - this is normal if user didn't come from a redirect
         if (hasAuthParams) {
-          // If we had auth params but no user, something went wrong
-          // Clear URL params to prevent infinite loops
+          // If we had auth params but no user, wait a bit and check auth state
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          if (auth && auth.currentUser) {
+            // Auth completed! Clear URL and let onAuthChange handle redirect
+            window.history.replaceState({}, '', window.location.pathname);
+            setLoading(true);
+            return;
+          }
+          // Still no user, something went wrong
           window.history.replaceState({}, '', window.location.pathname);
           setError("Failed to complete Google sign in. Please try again.");
           setLoading(false);
@@ -103,22 +129,28 @@ function AuthPageContent() {
       } catch (error: any) {
         console.error("Error handling redirect:", error);
         
-        // Handle timeout
+        // Handle timeout - check auth state one more time
         if (error.message === 'REDIRECT_TIMEOUT') {
           console.warn("Redirect handling timed out, checking auth state");
+          // Wait a bit more and check again
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
           // Clear URL params
           if (hasAuthParams) {
             window.history.replaceState({}, '', window.location.pathname);
           }
+          
           // Check if user is authenticated despite timeout
           if (auth && auth.currentUser) {
-            // User is authenticated, let onAuthChange handle redirect
+            // User is authenticated! Let onAuthChange handle redirect
             setLoading(true);
             return;
           }
-          // Not authenticated, show error
-          setError("Sign in timed out. Please try again.");
-          setLoading(false);
+          
+          // Still not authenticated after waiting, show error
+          setError("Sign in is taking longer than expected. Please wait...");
+          // Keep loading and let onAuthChange handle it if auth completes
+          // Don't set loading to false - let the auth state change handle it
           return;
         }
         
