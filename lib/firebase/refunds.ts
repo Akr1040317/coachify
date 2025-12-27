@@ -92,23 +92,18 @@ export async function createRefund(params: RefundParams): Promise<RefundResult> 
     const charge = charges.data[0];
 
     // Create the refund
-    const refundParams: Stripe.RefundCreateParams = {
+    const refund = await stripe.refunds.create({
       charge: charge.id,
       amount: amountCents,
-    };
-    if (reason === "cancellation") {
-      refundParams.reason = "requested_by_customer";
-    }
-    if (metadata) {
-      refundParams.metadata = metadata;
-    }
-    const refund = await stripe.refunds.create(refundParams);
+      reason: reason === "cancellation" ? "requested_by_customer" : "other",
+      metadata: metadata || {},
+    });
 
     return {
       id: refund.id,
       amount: refund.amount,
-      status: refund.status || "pending",
-      reason: refund.reason ?? undefined,
+      status: refund.status,
+      reason: refund.reason || undefined,
     };
   } catch (error: any) {
     console.error("Error creating refund:", error);

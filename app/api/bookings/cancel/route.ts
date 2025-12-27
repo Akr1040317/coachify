@@ -57,18 +57,6 @@ export async function POST(request: NextRequest) {
       refundAmountCents: refundResult?.amount,
     });
 
-    // Sync cancellation to Google Calendar if enabled
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/google-calendar/sync`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, action: "delete" }),
-      });
-    } catch (error) {
-      console.error("Error syncing cancellation to Google Calendar:", error);
-      // Don't fail the cancellation if Google Calendar sync fails
-    }
-
     return NextResponse.json({
       success: true,
       refund: refundResult,

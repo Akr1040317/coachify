@@ -41,7 +41,6 @@ interface RescheduleBookingModalProps {
       name: string;
       durationMinutes: number;
       priceCents: number;
-      isActive: boolean;
       bufferMinutes?: number;
     }>;
   };
@@ -74,7 +73,7 @@ export function RescheduleBookingModal({
   const [priceDifference, setPriceDifference] = useState(0);
 
   const studentTimezone = getUserTimezone();
-  const coachTimezone = coach.timezone || "America/New_York";
+  const coachTimezone = coach.timezone || coach.timeZone || "America/New_York";
 
   useEffect(() => {
     if (isOpen) {

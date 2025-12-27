@@ -171,46 +171,35 @@ export function DashboardLayout({ children, role, activeTab: externalActiveTab, 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
       if (!user) {
-        setLoading(false);
         router.push("/auth");
         return;
       }
 
       try {
         const data = await getUserData(user.uid);
-        if (!data) {
-          // User document doesn't exist - redirect to get-started
-          setLoading(false);
-          router.push("/get-started");
-          return;
-        }
-        
-        if (data.role !== role || !data.onboardingCompleted) {
-          setLoading(false);
+        if (!data || data.role !== role || !data.onboardingCompleted) {
           router.push(`/onboarding/${role}/1`);
           return;
         }
-        
         setUser(user);
         setUserData(data);
         // Store user ID for child components
         if (typeof window !== "undefined") {
           localStorage.setItem("userId", user.uid);
         }
-        // Load coach data if role is coach (don't block on this)
+        // Load coach data if role is coach
         if (role === "coach") {
-          getCoachData(user.uid)
-            .then(coach => setCoachData(coach))
-            .catch(error => console.error("Error loading coach data:", error));
+          try {
+            const coach = await getCoachData(user.uid);
+            setCoachData(coach);
+          } catch (error) {
+            console.error("Error loading coach data:", error);
+          }
         }
-        setLoading(false);
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error fetching user data:", error);
+      } finally {
         setLoading(false);
-        // Only redirect if it's a permissions error, otherwise let user see the page
-        if (error.code === "permission-denied" || error.message?.includes("permission")) {
-          router.push("/auth");
-        }
       }
     });
 

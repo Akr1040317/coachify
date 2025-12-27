@@ -13,8 +13,7 @@ service cloud.firestore {
     
     // Helper function to get user role
     function getUserRole() {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return userDoc != null && userDoc.data != null ? userDoc.data.role : null;
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
     
     // Users collection
@@ -43,9 +42,10 @@ service cloud.firestore {
     
     // Coaches collection
     match /coaches/{coachId} {
-      // Public read access for all coaches (for profile pages)
-      // This allows unauthenticated users to view coach profiles
-      allow read: if true;
+      // Public read access for active coaches OR verified coaches
+      allow read: if resource.data.status == "active" || resource.data.isVerified == true;
+      // Coaches can read their own data
+      allow read: if isOwner(coachId);
       // Coaches can create their own data
       allow create: if isAuthenticated() && isOwner(coachId);
       // Coaches can update their own data (including customOfferings)

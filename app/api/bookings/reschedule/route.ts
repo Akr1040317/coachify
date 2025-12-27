@@ -125,18 +125,6 @@ export async function POST(request: NextRequest) {
       }),
     });
 
-    // Sync reschedule to Google Calendar if enabled
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/google-calendar/sync`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, action: "update" }),
-      });
-    } catch (error) {
-      console.error("Error syncing reschedule to Google Calendar:", error);
-      // Don't fail the reschedule if Google Calendar sync fails
-    }
-
     return NextResponse.json({
       success: true,
       booking: {

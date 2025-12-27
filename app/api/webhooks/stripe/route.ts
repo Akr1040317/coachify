@@ -97,20 +97,11 @@ export async function POST(request: NextRequest) {
         if (booking) {
           await updateBooking(metadata.bookingId, {
             status: "confirmed",
-            paymentStatus: "paid",
             stripePaymentIntentId: paymentIntentId,
           });
-
         }
       } else if (metadata?.coachId && metadata?.scheduledStart) {
         // Create booking for session
-        console.log("Creating booking from checkout session:", {
-          sessionId: session.id,
-          userId,
-          coachId: metadata.coachId,
-          scheduledStart: metadata.scheduledStart,
-        });
-
         const scheduledStart = Timestamp.fromDate(new Date(metadata.scheduledStart));
         const sessionMinutes = parseInt(metadata.sessionMinutes || "60");
         const scheduledEnd = metadata.scheduledEnd
@@ -119,22 +110,20 @@ export async function POST(request: NextRequest) {
 
         // Get coach to get timezone
         const coach = await getCoachData(metadata.coachId);
-        const timeZone = metadata.timeZone || coach?.timezone || "America/New_York";
+        const timeZone = metadata.timeZone || coach?.timezone || coach?.timeZone || "America/New_York";
         const bufferMinutes = parseInt(metadata.bufferMinutes || "0");
 
-        const bookingId = await createBooking({
+        await createBooking({
           studentId: userId,
           coachId: metadata.coachId,
           type: "paid",
           sessionMinutes,
           priceCents: session.amount_total || 0,
           currency: session.currency || "usd",
-          status: "confirmed", // Payment successful, booking confirmed
-          paymentStatus: "paid",
+          status: "requested", // Coach needs to confirm
           scheduledStart,
           scheduledEnd,
           stripeCheckoutSessionId: session.id,
-          stripePaymentIntentId: paymentIntentId,
           customOfferingId: metadata.customOfferingId,
           timeZone,
           bufferMinutes,
@@ -143,28 +132,6 @@ export async function POST(request: NextRequest) {
             hoursBeforePartialRefund: 2,
             partialRefundPercent: 50,
           },
-        });
-
-        console.log("Booking created successfully:", { bookingId, userId, coachId: metadata.coachId });
-
-        // Sync booking to Google Calendar if enabled
-        try {
-          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-          await fetch(`${baseUrl}/api/google-calendar/sync`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ bookingId, action: "create" }),
-          });
-        } catch (error) {
-          console.error("Error syncing booking to Google Calendar:", error);
-          // Don't fail the booking if Google Calendar sync fails
-        }
-      } else {
-        console.warn("Checkout session completed but no booking created - missing metadata:", {
-          hasBookingId: !!metadata?.bookingId,
-          hasCoachId: !!metadata?.coachId,
-          hasScheduledStart: !!metadata?.scheduledStart,
-          metadata,
         });
       }
     }

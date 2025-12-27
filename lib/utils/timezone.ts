@@ -1,5 +1,5 @@
-import { parseISO } from "date-fns";
-import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
+import { format, parseISO, zonedTimeToUtc, utcToZonedTime } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 
 /**
  * Timezone utilities for handling timezone conversions in the booking system
@@ -24,8 +24,8 @@ export function convertTimezone(
   toTimezone: string
 ): Date {
   // Convert to UTC first, then to target timezone
-  const utcDate = fromZonedTime(date, fromTimezone);
-  return toZonedTime(utcDate, toTimezone);
+  const utcDate = zonedTimeToUtc(date, fromTimezone);
+  return utcToZonedTime(utcDate, toTimezone);
 }
 
 /**
@@ -124,7 +124,7 @@ export function storeBookingTime(
   localDate.setHours(hour, minute, 0, 0);
 
   // Convert to UTC
-  const utcDate = fromZonedTime(localDate, timezone);
+  const utcDate = zonedTimeToUtc(localDate, timezone);
 
   return {
     utcDate,

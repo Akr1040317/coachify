@@ -9,11 +9,147 @@ import { where } from "firebase/firestore";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import { BadgeVerified } from "@/components/ui/BadgeVerified";
-import { motion } from "framer-motion";
-import { getUserTimezone, convertTimeSlotToStudentTimezone, storeBookingTime } from "@/lib/utils/timezone";
+import { getUserTimezone, convertTimeSlotToStudentTimezone, storeBookingTime, displayBookingTime } from "@/lib/utils/timezone";
 import { calculateAvailableSlotsWithBuffers, getEffectiveAvailability } from "@/lib/utils/booking";
-import { BookingCalendar } from "@/components/booking/BookingCalendar";
-import { eachDayOfInterval, startOfWeek, endOfWeek, addDays, format as dateFnsFormat, startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addMonths, subMonths, isToday, format as dateFnsFormat } from "date-fns";
+
+// Calendar Component
+function CalendarView({
+  calendarDate,
+  onCalendarDateChange,
+  selectedDate,
+  onDateSelect,
+  coach,
+  bookings,
+  studentTimezone,
+  selectedMinutes,
+  selectedCustomOffering,
+  coachTimezone,
+}: {
+  calendarDate: Date;
+  onCalendarDateChange: (date: Date) => void;
+  selectedDate: string;
+  onDateSelect: (date: string) => void;
+  coach: any;
+  bookings: any[];
+  studentTimezone: string;
+  selectedMinutes: number;
+  selectedCustomOffering: string | null;
+  coachTimezone: string;
+}) {
+  const monthStart = startOfMonth(calendarDate);
+  const monthEnd = endOfMonth(calendarDate);
+  const calendarStart = startOfWeek(monthStart);
+  const calendarEnd = endOfWeek(monthEnd);
+  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
+
+  const getAvailableSlotsForDate = (date: Date) => {
+    const dateString = date.toISOString().split("T")[0];
+    const effectiveAvailability = getEffectiveAvailability(
+      date,
+      coach.availabilitySlots || [],
+      coach.availabilityOverrides
+    );
+
+    if (!effectiveAvailability || !effectiveAvailability.isAvailable) {
+      return [];
+    }
+
+    let bufferMinutes = 0;
+    if (selectedCustomOffering && coach.customOfferings) {
+      const offering = coach.customOfferings.find((o: any) => o.id === selectedCustomOffering);
+      bufferMinutes = offering?.bufferMinutes || 0;
+    }
+
+    const slots = calculateAvailableSlotsWithBuffers(
+      date,
+      {
+        dayOfWeek: date.getDay(),
+        startTime: effectiveAvailability.startTime,
+        endTime: effectiveAvailability.endTime,
+        isAvailable: true,
+      },
+      bookings.map((b) => ({
+        scheduledStart: b.scheduledStart,
+        scheduledEnd: b.scheduledEnd,
+        status: b.status,
+        bufferMinutes: b.bufferMinutes,
+      })),
+      selectedMinutes || 30,
+      bufferMinutes
+    );
+
+    return slots.length;
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => onCalendarDateChange(subMonths(calendarDate, 1))}
+          className="p-2 rounded-lg border border-gray-600 hover:border-gray-500 transition-colors"
+        >
+          ←
+        </button>
+        <h3 className="text-lg font-bold">{dateFnsFormat(calendarDate, "MMMM yyyy")}</h3>
+        <button
+          onClick={() => onCalendarDateChange(addMonths(calendarDate, 1))}
+          className="p-2 rounded-lg border border-gray-600 hover:border-gray-500 transition-colors"
+        >
+          →
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+          <div key={day} className="text-center text-xs font-semibold text-gray-400 py-1">
+            {day}
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {calendarDays.map((day, idx) => {
+          const isCurrentMonth = isSameMonth(day, calendarDate);
+          const isCurrentDay = isToday(day);
+          const dayString = day.toISOString().split("T")[0];
+          const isSelected = selectedDate === dayString;
+          const isPast = day < new Date() && !isToday(day);
+          const availableSlots = getAvailableSlotsForDate(day);
+          const hasAvailability = availableSlots > 0 && !isPast && isCurrentMonth;
+
+          return (
+            <button
+              key={idx}
+              onClick={() => {
+                if (!isPast && isCurrentMonth) {
+                  onDateSelect(dayString);
+                }
+              }}
+              disabled={isPast || !isCurrentMonth}
+              className={`
+                aspect-square p-1 rounded-lg border-2 text-sm transition-all
+                ${isSelected
+                  ? "border-blue-500 bg-blue-500/20 text-blue-400"
+                  : isCurrentDay
+                  ? "border-blue-500/50 bg-blue-500/10 text-blue-300"
+                  : hasAvailability
+                  ? "border-gray-600 bg-gray-800/30 text-white hover:border-gray-500 cursor-pointer"
+                  : isPast || !isCurrentMonth
+                  ? "border-gray-800 bg-gray-900/20 text-gray-600 cursor-not-allowed opacity-50"
+                  : "border-gray-700 bg-gray-800/20 text-gray-500 cursor-not-allowed"
+                }
+              `}
+            >
+              <div className="text-xs">{dateFnsFormat(day, "d")}</div>
+              {hasAvailability && (
+                <div className="text-[10px] text-green-400 mt-0.5">{availableSlots} slots</div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function NewBookingPageContent() {
   const router = useRouter();
@@ -31,6 +167,8 @@ function NewBookingPageContent() {
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [bookings, setBookings] = useState<any[]>([]);
   const [studentTimezone, setStudentTimezone] = useState<string>("UTC");
+  const [calendarDate, setCalendarDate] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -86,7 +224,7 @@ function NewBookingPageContent() {
     if (!date || !coach) return [];
     
     const selectedDateObj = new Date(date);
-    const coachTimezone = coach.timezone || "America/New_York";
+    const coachTimezone = coach.timezone || coach.timeZone || "America/New_York";
     
     // Get effective availability (weekly + overrides)
     const effectiveAvailability = getEffectiveAvailability(
@@ -150,7 +288,7 @@ function NewBookingPageContent() {
       return;
     }
 
-    const coachTimezone = coach.timezone || "America/New_York";
+    const coachTimezone = coach.timezone || coach.timeZone || "America/New_York";
     
     // Convert selected time back to coach's timezone for storage
     // The selectedTime is in student's timezone, we need to convert it to coach's timezone
@@ -302,67 +440,62 @@ function NewBookingPageContent() {
         <GradientCard>
           <h3 className="text-xl font-bold mb-4">Session Type</h3>
           <div className="space-y-3 mb-6">
-            {/* Only show default offers if no offeringId was provided */}
-            {!offeringId && (
-              <>
-                {coach.sessionOffers?.freeIntroEnabled && (
-                  <button
-                    onClick={() => setSelectedType("free_intro")}
-                    className={`
-                      w-full p-4 rounded-lg border-2 text-left transition-all
-                      ${selectedType === "free_intro"
-                        ? "border-blue-500 bg-blue-500/10"
-                        : "border-gray-600 hover:border-gray-500"
-                      }
-                    `}
-                  >
-                    <div className="font-semibold">Free Intro Consultation</div>
-                    <div className="text-sm text-gray-400">{coach.sessionOffers.freeIntroMinutes} minutes</div>
-                  </button>
-                )}
-                {price30 > 0 && (
-                  <button
-                    onClick={() => {
-                      setSelectedType("paid");
-                      setSelectedMinutes(30);
-                    }}
-                    className={`
-                      w-full p-4 rounded-lg border-2 text-left transition-all
-                      ${selectedType === "paid" && selectedMinutes === 30
-                        ? "border-blue-500 bg-blue-500/10"
-                        : "border-gray-600 hover:border-gray-500"
-                      }
-                    `}
-                  >
-                    <div className="font-semibold">30-minute Session</div>
-                    <div className="text-sm text-gray-400">${price30}</div>
-                  </button>
-                )}
-                {price60 > 0 && (
-                  <button
-                    onClick={() => {
-                      setSelectedType("paid");
-                      setSelectedMinutes(60);
-                      setSelectedCustomOffering(null);
-                    }}
-                    className={`
-                      w-full p-4 rounded-lg border-2 text-left transition-all
-                      ${selectedType === "paid" && selectedMinutes === 60 && !selectedCustomOffering
-                        ? "border-blue-500 bg-blue-500/10"
-                        : "border-gray-600 hover:border-gray-500"
-                      }
-                    `}
-                  >
-                    <div className="font-semibold">60-minute Session</div>
-                    <div className="text-sm text-gray-400">${price60}</div>
-                  </button>
-                )}
-              </>
+            {coach.sessionOffers?.freeIntroEnabled && (
+              <button
+                onClick={() => setSelectedType("free_intro")}
+                className={`
+                  w-full p-4 rounded-lg border-2 text-left transition-all
+                  ${selectedType === "free_intro"
+                    ? "border-blue-500 bg-blue-500/10"
+                    : "border-gray-600 hover:border-gray-500"
+                  }
+                `}
+              >
+                <div className="font-semibold">Free Intro Consultation</div>
+                <div className="text-sm text-gray-400">{coach.sessionOffers.freeIntroMinutes} minutes</div>
+              </button>
             )}
-            {/* Custom Offerings - always show coach-created offerings */}
+            {price30 > 0 && (
+              <button
+                onClick={() => {
+                  setSelectedType("paid");
+                  setSelectedMinutes(30);
+                }}
+                className={`
+                  w-full p-4 rounded-lg border-2 text-left transition-all
+                  ${selectedType === "paid" && selectedMinutes === 30
+                    ? "border-blue-500 bg-blue-500/10"
+                    : "border-gray-600 hover:border-gray-500"
+                  }
+                `}
+              >
+                <div className="font-semibold">30-minute Session</div>
+                <div className="text-sm text-gray-400">${price30}</div>
+              </button>
+            )}
+            {price60 > 0 && (
+              <button
+                onClick={() => {
+                  setSelectedType("paid");
+                  setSelectedMinutes(60);
+                  setSelectedCustomOffering(null);
+                }}
+                className={`
+                  w-full p-4 rounded-lg border-2 text-left transition-all
+                  ${selectedType === "paid" && selectedMinutes === 60 && !selectedCustomOffering
+                    ? "border-blue-500 bg-blue-500/10"
+                    : "border-gray-600 hover:border-gray-500"
+                  }
+                `}
+              >
+                <div className="font-semibold">60-minute Session</div>
+                <div className="text-sm text-gray-400">${price60}</div>
+              </button>
+            )}
+            {/* Custom Offerings */}
             {coach.customOfferings && coach.customOfferings.filter((o: any) => o.isActive && !o.isFree).length > 0 && (
               <>
-                {!offeringId && <div className="text-sm text-gray-400 mt-4 mb-2">Custom Offerings</div>}
+                <div className="text-sm text-gray-400 mt-4 mb-2">Custom Offerings</div>
                 {coach.customOfferings
                   .filter((o: any) => o.isActive && !o.isFree)
                   .map((offering: any) => (
@@ -394,77 +527,82 @@ function NewBookingPageContent() {
             )}
           </div>
 
-          <div className="space-y-6">
-            {/* Enhanced Calendar UI */}
+          <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-4">Select Date</label>
-              <BookingCalendar
-                selectedDate={selectedDate}
-                onDateSelect={(date) => {
-                  setSelectedDate(date);
-                  setSelectedTime(""); // Reset time when date changes
-                }}
-                coachTimezone={coach?.timezone}
-                minDate={new Date()}
-                maxDate={addDays(new Date(), 90)} // Allow booking up to 90 days ahead
-              />
-            </div>
-
-            {/* Fallback date picker (mobile-friendly) */}
-            <div className="md:hidden">
-              <label className="block text-sm font-medium mb-2">Or pick a date</label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => {
-                  setSelectedDate(e.target.value);
-                  setSelectedTime("");
-                }}
-                min={new Date().toISOString().split("T")[0]}
-                className="w-full px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white"
-              />
+              <label className="block text-sm font-medium mb-2">Date</label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setSelectedTime(""); // Reset time when date changes
+                  }}
+                  min={new Date().toISOString().split("T")[0]}
+                  className="flex-1 px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className="px-4 py-2 bg-[var(--card)] border border-gray-600 rounded-lg text-white hover:border-gray-500 transition-colors"
+                >
+                  📅
+                </button>
+              </div>
+              {coach && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Your timezone: {studentTimezone} • Coach timezone: {coach.timezone || coach.timeZone || "America/New_York"}
+                </p>
+              )}
+              
+              {/* Visual Calendar */}
+              {showCalendar && coach && (
+                <div className="mt-4 p-4 bg-[var(--card)] border border-gray-600 rounded-lg">
+                  <CalendarView
+                    calendarDate={calendarDate}
+                    onCalendarDateChange={setCalendarDate}
+                    selectedDate={selectedDate}
+                    onDateSelect={(date) => {
+                      setSelectedDate(date);
+                      setSelectedTime("");
+                      setShowCalendar(false);
+                    }}
+                    coach={coach}
+                    bookings={bookings}
+                    studentTimezone={studentTimezone}
+                    selectedMinutes={selectedMinutes}
+                    selectedCustomOffering={selectedCustomOffering}
+                    coachTimezone={coach.timezone || coach.timeZone || "America/New_York"}
+                  />
+                </div>
+              )}
             </div>
 
             {selectedDate && (
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="block text-sm font-medium">Available Times</label>
-                  {coach?.timezone && (
-                    <span className="text-xs text-gray-400">
-                      Times in {Intl.DateTimeFormat(undefined, { timeZone: coach.timezone || "UTC", timeZoneName: "short" }).formatToParts(new Date()).find(part => part.type === "timeZoneName")?.value || coach.timezone}
-                    </span>
-                  )}
-                </div>
+                <label className="block text-sm font-medium mb-2">
+                  Available Times ({studentTimezone})
+                </label>
                 {availableSlots.length === 0 ? (
-                  <div className="bg-gray-800/30 border-2 border-gray-700 rounded-lg p-6 text-center">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p className="text-sm text-gray-400 mb-1">
-                      No available slots for this date
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Please select another date
-                    </p>
-                  </div>
+                  <p className="text-sm text-gray-400 py-4">
+                    No available slots for this date. Please select another date.
+                  </p>
                 ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     {availableSlots.map((slot) => (
-                      <motion.button
+                      <button
                         key={slot}
                         onClick={() => setSelectedTime(slot)}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
                         className={`
-                          px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium
+                          px-3 py-2 rounded-lg border-2 transition-all text-sm
                           ${selectedTime === slot
-                            ? "border-blue-500 bg-blue-500/20 text-blue-400 shadow-lg shadow-blue-500/20"
-                            : "border-gray-600 hover:border-gray-500 text-gray-300 hover:bg-gray-800/50"
+                            ? "border-blue-500 bg-blue-500/10 text-blue-400"
+                            : "border-gray-600 hover:border-gray-500 text-gray-300"
                           }
                         `}
                       >
                         {slot}
-                      </motion.button>
+                      </button>
                     ))}
                   </div>
                 )}

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { onAuthChange } from "@/lib/firebase/auth";
 import { User } from "firebase/auth";
 import { getBookings, getCoachData, type BookingData } from "@/lib/firebase/firestore";
@@ -10,14 +10,14 @@ import { GradientCard } from "@/components/ui/GradientCard";
 import { GlowButton } from "@/components/ui/GlowButton";
 import Link from "next/link";
 import { format } from "date-fns";
+import { displayBookingTime, getUserTimezone } from "@/lib/utils/timezone";
 
-function BookingsContent() {
+export default function StudentBookingsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
-  const [bookings, setBookings] = useState<(BookingData & { id: string; coachName?: string })[]>([]);
+  const [bookings, setBookings] = useState<(BookingData & { id: string; coachName?: string; coachTimezone?: string })[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [studentTimezone, setStudentTimezone] = useState<string>("UTC");
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
@@ -26,20 +26,12 @@ function BookingsContent() {
         return;
       }
       setUser(user);
+      setStudentTimezone(getUserTimezone());
       await loadBookings(user.uid);
-      
-      // Check for success parameter
-      if (searchParams.get("success") === "true") {
-        setShowSuccess(true);
-        // Remove success parameter from URL
-        router.replace("/app/student/bookings");
-        // Hide success message after 5 seconds
-        setTimeout(() => setShowSuccess(false), 5000);
-      }
     });
 
     return () => unsubscribe();
-  }, [router, searchParams]);
+  }, [router]);
 
   const loadBookings = async (studentId: string) => {
     setLoading(true);
@@ -52,7 +44,11 @@ function BookingsContent() {
       const bookingsWithCoaches = await Promise.all(
         bookingsData.map(async (booking) => {
           const coach = await getCoachData(booking.coachId);
-          return { ...booking, coachName: coach?.displayName || "Unknown Coach" };
+          return { 
+            ...booking, 
+            coachName: coach?.displayName || "Unknown Coach",
+            coachTimezone: coach?.timezone || coach?.timeZone || "America/New_York"
+          };
         })
       );
 
@@ -65,10 +61,10 @@ function BookingsContent() {
   };
 
   const upcomingBookings = bookings.filter(
-    (b) => (b.status === "confirmed" || b.status === "requested") && b.scheduledStart.toDate() > new Date()
+    (b) => b.status === "confirmed" && b.scheduledStart.toDate() > new Date()
   );
   const pastBookings = bookings.filter(
-    (b) => b.status === "completed" || (b.scheduledStart.toDate() < new Date() && b.status !== "cancelled")
+    (b) => b.status === "completed" || b.scheduledStart.toDate() < new Date()
   );
 
   return (
@@ -82,12 +78,6 @@ function BookingsContent() {
             </GlowButton>
           </Link>
         </div>
-
-        {showSuccess && (
-          <div className="mb-6 p-4 bg-green-500/20 border border-green-500/50 rounded-lg text-green-400">
-            ✓ Payment successful! Your booking has been confirmed.
-          </div>
-        )}
 
         {loading ? (
           <div className="text-center py-12 text-gray-400">Loading bookings...</div>
@@ -104,7 +94,13 @@ function BookingsContent() {
                           <div>
                             <h3 className="text-xl font-bold mb-1">{booking.coachName}</h3>
                             <p className="text-gray-400">
-                              {format(booking.scheduledStart.toDate(), "PPP 'at' p")}
+                              {displayBookingTime(booking.scheduledStart.toDate(), studentTimezone, "PPP 'at' p")}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {studentTimezone}
+                              {booking.coachTimezone && booking.coachTimezone !== studentTimezone && (
+                                <span> • Coach: {booking.coachTimezone}</span>
+                              )}
                             </p>
                             <p className="text-sm text-gray-500 mt-1">
                               {booking.sessionMinutes} minutes • {booking.type === "free_intro" ? "Free Intro" : `$${booking.priceCents / 100}`}
@@ -132,8 +128,9 @@ function BookingsContent() {
                           <div>
                             <h3 className="text-xl font-bold mb-1">{booking.coachName}</h3>
                             <p className="text-gray-400">
-                              {format(booking.scheduledStart.toDate(), "PPP 'at' p")}
+                              {displayBookingTime(booking.scheduledStart.toDate(), studentTimezone, "PPP 'at' p")}
                             </p>
+                            <p className="text-xs text-gray-500 mt-1">{studentTimezone}</p>
                           </div>
                           <div className="px-4 py-2 bg-gray-500/20 text-gray-400 rounded-full">
                             {booking.status}
@@ -155,14 +152,6 @@ function BookingsContent() {
         )}
       </div>
     </div>
-  );
-}
-
-export default function StudentBookingsPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[var(--background)] p-8"><div className="text-center py-12 text-gray-400">Loading...</div></div>}>
-      <BookingsContent />
-    </Suspense>
   );
 }
 

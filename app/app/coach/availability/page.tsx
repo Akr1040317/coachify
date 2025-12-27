@@ -55,8 +55,6 @@ export default function AvailabilityPage() {
   const [overrideIsAvailable, setOverrideIsAvailable] = useState(true);
   const [overrideStartTime, setOverrideStartTime] = useState("09:00");
   const [overrideEndTime, setOverrideEndTime] = useState("17:00");
-  const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
-  const [connectingGoogleCalendar, setConnectingGoogleCalendar] = useState(false);
 
   const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -97,15 +95,15 @@ export default function AvailabilityPage() {
       // Load timezone
       if (coachData?.timezone) {
         setTimezone(coachData.timezone);
+      } else if (coachData?.timeZone) {
+        // Handle legacy camelCase
+        setTimezone(coachData.timeZone);
       }
 
       // Load availability overrides
       if (coachData?.availabilityOverrides) {
         setAvailabilityOverrides(coachData.availabilityOverrides);
       }
-
-      // Check if Google Calendar is connected
-      setGoogleCalendarConnected(!!coachData?.googleCalendarSyncEnabled && !!coachData?.googleCalendarAccessToken);
 
       // Load bookings
       const bookingsData = await getBookings([
@@ -201,52 +199,6 @@ export default function AvailabilityPage() {
     }
   };
 
-
-  const handleConnectGoogleCalendar = async () => {
-    if (!user) return;
-
-    setConnectingGoogleCalendar(true);
-    try {
-      const response = await fetch(
-        `/api/google-calendar/auth?coachId=${user.uid}&redirectUri=${encodeURIComponent(window.location.href)}`
-      );
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to initiate Google Calendar connection");
-      }
-
-      const { authUrl } = await response.json();
-      window.location.href = authUrl;
-    } catch (error: any) {
-      console.error("Error connecting Google Calendar:", error);
-      alert(`Failed to connect Google Calendar: ${error.message}`);
-      setConnectingGoogleCalendar(false);
-    }
-  };
-
-  const handleDisconnectGoogleCalendar = async () => {
-    if (!user) return;
-
-    if (!confirm("Are you sure you want to disconnect Google Calendar? Future bookings will not be synced automatically.")) {
-      return;
-    }
-
-    try {
-      await updateCoachData(user.uid, {
-        googleCalendarSyncEnabled: false,
-        googleCalendarAccessToken: undefined,
-        googleCalendarRefreshToken: undefined,
-      });
-      setGoogleCalendarConnected(false);
-      alert("Google Calendar disconnected successfully.");
-      await loadData(user.uid);
-    } catch (error) {
-      console.error("Error disconnecting Google Calendar:", error);
-      alert("Failed to disconnect Google Calendar");
-    }
-  };
-
   const getAvailableSlots = (dayOfWeek: number, date: Date) => {
     const daySlot = availability.find((s) => s.dayOfWeek === dayOfWeek && s.isAvailable);
     if (!daySlot) return [];
@@ -308,43 +260,6 @@ export default function AvailabilityPage() {
               Save Availability
             </GlowButton>
           </div>
-
-          {/* Google Calendar Integration */}
-          <GradientCard className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Google Calendar Sync</h2>
-                <p className="text-gray-400 text-sm">
-                  Automatically sync your bookings to Google Calendar
-                </p>
-                {googleCalendarConnected && (
-                  <p className="text-green-400 text-sm mt-2">
-                    ✓ Connected - Bookings will be synced automatically
-                  </p>
-                )}
-              </div>
-              <div>
-                {googleCalendarConnected ? (
-                  <GlowButton
-                    variant="outline"
-                    onClick={handleDisconnectGoogleCalendar}
-                    glowColor="purple"
-                  >
-                    Disconnect
-                  </GlowButton>
-                ) : (
-                  <GlowButton
-                    variant="primary"
-                    onClick={handleConnectGoogleCalendar}
-                    disabled={connectingGoogleCalendar}
-                    glowColor="blue"
-                  >
-                    {connectingGoogleCalendar ? "Connecting..." : "Connect Google Calendar"}
-                  </GlowButton>
-                )}
-              </div>
-            </div>
-          </GradientCard>
 
           <GradientCard className="p-6">
             <div className="flex items-center justify-between mb-6">
@@ -564,7 +479,7 @@ export default function AvailabilityPage() {
                             {bookingDate.toLocaleDateString()} at {bookingDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                           </div>
                           <div className="text-sm text-gray-400">
-                            Duration: {booking.sessionMinutes || 30} minutes
+                            Duration: {booking.durationMinutes || 30} minutes
                           </div>
                           {booking.customOfferingId && (
                             <div className="text-sm text-gray-400">

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signInWithGoogle, signUpWithEmail, signInWithEmail, onAuthChange, handleGoogleRedirect, auth } from "@/lib/firebase/auth";
+import { signInWithGoogle, signUpWithEmail, signInWithEmail, onAuthChange } from "@/lib/firebase/auth";
 import { getUserData, createUserData } from "@/lib/firebase/firestore";
 import { User } from "firebase/auth";
 import { GlowButton } from "@/components/ui/GlowButton";
@@ -48,146 +48,12 @@ function AuthPageContent() {
     }
   }, [mode, router]);
 
-  // Check if user is already authenticated on mount (faster than waiting for onAuthChange)
-  useEffect(() => {
-    if (auth && auth.currentUser) {
-      setLoading(true);
-      // User already authenticated, onAuthChange will handle redirect
-    }
-  }, []);
-
-  // Handle Google OAuth redirect callback
-  useEffect(() => {
-    const checkRedirectResult = async () => {
-      // Check if we're returning from a redirect more precisely
-      // Only check for Firebase auth handler in URL or actual OAuth params
-      const urlParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const isFirebaseHandler = window.location.href.includes('__/auth/handler');
-      const hasOAuthParams = (urlParams.has('code') && urlParams.has('state')) || 
-                            (hashParams.has('code') && hashParams.has('state'));
-      const hasAuthParams = isFirebaseHandler || hasOAuthParams;
-      
-      if (hasAuthParams) {
-        setLoading(true);
-      }
-      
-      try {
-        // Call getRedirectResult immediately - it's safe to call even if no redirect happened
-        // Use a longer timeout (15 seconds) and then check auth state
-        const redirectPromise = handleGoogleRedirect();
-        const timeoutPromise = new Promise<null>((_, reject) => 
-          setTimeout(() => reject(new Error('REDIRECT_TIMEOUT')), 15000)
-        );
-        
-        let user;
-        try {
-          user = await Promise.race([redirectPromise, timeoutPromise]);
-        } catch (timeoutError: any) {
-          // If timeout, check if auth completed in the background
-          if (timeoutError.message === 'REDIRECT_TIMEOUT') {
-            // Wait a bit more and check auth state
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            if (auth && auth.currentUser) {
-              // Auth completed! Clear URL and let onAuthChange handle redirect
-              if (hasAuthParams) {
-                window.history.replaceState({}, '', window.location.pathname);
-              }
-              setLoading(true);
-              return;
-            }
-            throw timeoutError;
-          }
-          throw timeoutError;
-        }
-        
-        if (user) {
-          // User returned from redirect successfully
-          // Clear URL params after processing to prevent re-processing
-          if (hasAuthParams) {
-            window.history.replaceState({}, '', window.location.pathname);
-          }
-          // Keep loading state - onAuthChange will handle redirect
-          return;
-        }
-        
-        // No redirect result - this is normal if user didn't come from a redirect
-        if (hasAuthParams) {
-          // If we had auth params but no user, wait a bit and check auth state
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          if (auth && auth.currentUser) {
-            // Auth completed! Clear URL and let onAuthChange handle redirect
-            window.history.replaceState({}, '', window.location.pathname);
-            setLoading(true);
-            return;
-          }
-          // Still no user, something went wrong
-          window.history.replaceState({}, '', window.location.pathname);
-          setError("Failed to complete Google sign in. Please try again.");
-          setLoading(false);
-        }
-      } catch (error: any) {
-        console.error("Error handling redirect:", error);
-        
-        // Handle timeout - check auth state one more time
-        if (error.message === 'REDIRECT_TIMEOUT') {
-          console.warn("Redirect handling timed out, checking auth state");
-          // Wait a bit more and check again
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          // Clear URL params
-          if (hasAuthParams) {
-            window.history.replaceState({}, '', window.location.pathname);
-          }
-          
-          // Check if user is authenticated despite timeout
-          if (auth && auth.currentUser) {
-            // User is authenticated! Let onAuthChange handle redirect
-            setLoading(true);
-            return;
-          }
-          
-          // Still not authenticated after waiting, show error
-          setError("Sign in is taking longer than expected. Please wait...");
-          // Keep loading and let onAuthChange handle it if auth completes
-          // Don't set loading to false - let the auth state change handle it
-          return;
-        }
-        
-        // Clear URL params on error to prevent re-processing
-        if (hasAuthParams) {
-          window.history.replaceState({}, '', window.location.pathname);
-        }
-        
-        // Don't show error if redirect was just initiated (user is being redirected)
-        if (error.message === 'REDIRECT_INITIATED') {
-          // Keep loading state, user is being redirected
-          return;
-        }
-        
-        // Show user-friendly error message
-        const errorMessage = error.message || error.code || "Failed to complete Google sign in. Please try again.";
-        setError(errorMessage);
-        setLoading(false);
-      }
-    };
-    
-    checkRedirectResult();
-  }, []);
-
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
       if (user) {
-        setLoading(true);
         try {
-          // Add timeout to prevent infinite loading on slow networks
-          const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('TIMEOUT')), 10000)
-          );
-          
-          // Check if user data exists with timeout
-          const userDataPromise = getUserData(user.uid);
-          const userData = await Promise.race([userDataPromise, timeoutPromise]) as Awaited<ReturnType<typeof getUserData>>;
+          // Check if user data exists
+          const userData = await getUserData(user.uid);
           
           if (!userData) {
             // New user signing in - redirect to get-started
@@ -204,36 +70,16 @@ function AuthPageContent() {
           }
         } catch (fetchError: any) {
           console.error("Error fetching user data:", fetchError);
-          
-          // Handle timeout specifically
-          if (fetchError.message === 'TIMEOUT') {
-            // Try to redirect anyway - user is authenticated, just data fetch timed out
-            // They can retry from dashboard if needed
-            console.warn("User data fetch timed out, redirecting to get-started");
-            router.push("/get-started"); // Redirect new users to signup flow
-            setLoading(false);
-            return;
+          // If it's a permissions error, show helpful message
+          if (fetchError.code === "permission-denied" || fetchError.message?.includes("permission")) {
+            setError(
+              "Firestore security rules not deployed. Please deploy firestore.rules using: firebase deploy --only firestore:rules"
+            );
+          } else {
+            setError("Failed to load user data. Please try again.");
           }
-          
-          // Handle permission denied - this usually means new user (document doesn't exist)
-          if (fetchError.code === "permission-denied" || 
-              fetchError.code === "permissions-denied" ||
-              fetchError.message?.includes("permission") ||
-              fetchError.message?.includes("Missing or insufficient permissions")) {
-            // For new users, permission denied is expected - redirect to get-started
-            console.log("Permission denied - likely new user, redirecting to get-started");
-            router.push("/get-started");
-            setLoading(false);
-            return;
-          }
-          
-          // Other errors - show error message
-          setError("Failed to load user data. Please try again.");
           setLoading(false);
         }
-      } else {
-        // User signed out
-        setLoading(false);
       }
     });
 
@@ -279,31 +125,12 @@ function AuthPageContent() {
     try {
       await signInWithGoogle();
       // onAuthChange will handle the redirect
-      // Note: If redirect was initiated, this will throw REDIRECT_INITIATED error
-      // and the user will be redirected away, so loading state will persist
     } catch (error: any) {
       console.error("Auth error:", error);
-      // Don't show error if redirect was initiated (user will be redirected away)
-      if (error.message === 'REDIRECT_INITIATED') {
-        // Keep loading state, user is being redirected
-        return;
-      }
       setError(error.message || "Failed to sign in with Google. Please try again.");
       setLoading(false);
     }
   };
-
-  // Show loading screen during redirect or authentication
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mb-4"></div>
-          <p className="text-gray-400">Signing you in...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[var(--background)]">

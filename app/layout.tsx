@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { ConsoleWarningFilter } from "@/components/ConsoleWarningFilter";
 
 export const metadata: Metadata = {
   title: "Coachify - Real coaches. Real progress. From anywhere.",
@@ -14,10 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>
-        <ConsoleWarningFilter />
-        {children}
-      </body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

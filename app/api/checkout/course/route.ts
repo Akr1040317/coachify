@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       coachId: course.coachId,
       productName: course.title,
       productDescription: course.description,
-      successUrl: `${baseUrl}/app/student/bookings?success=true`,
+      successUrl: `${baseUrl}/app/student/library?success=true`,
       cancelUrl: `${baseUrl}/course/${courseId}?canceled=true`,
       metadata: {
         userId,
