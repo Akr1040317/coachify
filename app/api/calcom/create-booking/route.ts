@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       endTime,
       user.email || `${userId}@coachify.app`,
       user.displayName || "Student",
-      user.timeZone || "America/New_York",
+      (user as any).timeZone || (user as any).timezone || "America/New_York",
       {
         coachId,
         userId,

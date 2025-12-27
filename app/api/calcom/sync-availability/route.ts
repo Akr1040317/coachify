@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const schedule = await calcomClient.createOrUpdateSchedule(
       calcomUserId,
       `${coach.displayName}'s Schedule`,
-      coach.timeZone || "America/New_York",
+      coach.timezone || "America/New_York",
       calcomAvailability
     );
 

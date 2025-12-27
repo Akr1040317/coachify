@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       parseInt(eventTypeId),
       dateFrom,
       dateTo,
-      coach.timeZone || "America/New_York"
+      coach.timezone || "America/New_York"
     );
 
     return NextResponse.json({ slots });
