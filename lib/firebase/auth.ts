@@ -13,12 +13,32 @@ import { auth } from "./config";
 
 const googleProvider = new GoogleAuthProvider();
 
+// Set custom parameters to prevent redirect fallback
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
+
 export const signInWithGoogle = async (): Promise<User> => {
   if (!auth) {
     throw new Error("Firebase Auth is not initialized");
   }
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
+  
+  try {
+    // Try popup first - this will stay on the same page
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  } catch (error: any) {
+    // If popup is blocked, throw a user-friendly error instead of falling back to redirect
+    if (
+      error.code === 'auth/popup-blocked' || 
+      error.code === 'auth/popup-closed-by-user' ||
+      error.code === 'auth/cancelled-popup-request'
+    ) {
+      throw new Error('Popup was blocked. Please allow popups for this site and try again.');
+    }
+    // Re-throw other errors
+    throw error;
+  }
 };
 
 export const signUpWithEmail = async (

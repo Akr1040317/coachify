@@ -25,7 +25,9 @@ If you want to allow direct client-side uploads (for better performance or other
 
 ## Steps to Configure CORS
 
-1. **Install Google Cloud SDK (gsutil)**
+**Note**: These steps require a Google Cloud project. If you don't have one or don't want to use Google Cloud, the API route solution (Solution 1) works without any Google Cloud setup.
+
+1. **Install Google Cloud SDK (gsutil)** (Optional - only if using Solution 2)
 
    ```bash
    # macOS
@@ -34,19 +36,19 @@ If you want to allow direct client-side uploads (for better performance or other
    # Or download from: https://cloud.google.com/sdk/docs/install
    ```
 
-2. **Authenticate with Google Cloud**
+2. **Authenticate with Google Cloud** (Optional)
 
    ```bash
    gcloud auth login
    ```
 
-3. **Set your project**
+3. **Set your project** (Optional)
 
    ```bash
    gcloud config set project coachify-21435
    ```
 
-4. **Apply CORS configuration**
+4. **Apply CORS configuration** (Optional)
 
    ```bash
    gsutil cors set firebase-storage-cors.json gs://coachify-21435.firebasestorage.app

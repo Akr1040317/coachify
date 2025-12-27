@@ -51,6 +51,8 @@ function AuthPageContent() {
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user: User | null) => {
       if (user) {
+        // Keep loading state while fetching user data
+        setLoading(true);
         try {
           // Check if user data exists
           const userData = await getUserData(user.uid);
@@ -67,6 +69,7 @@ function AuthPageContent() {
             } else {
               router.push(`/onboarding/${userData.role}/1`);
             }
+            setLoading(false);
           }
         } catch (fetchError: any) {
           console.error("Error fetching user data:", fetchError);
@@ -80,6 +83,9 @@ function AuthPageContent() {
           }
           setLoading(false);
         }
+      } else {
+        // User signed out - reset loading state
+        setLoading(false);
       }
     });
 
@@ -123,11 +129,25 @@ function AuthPageContent() {
     setError(null);
     
     try {
+      // Show loading state - popup will open and user stays on page
       await signInWithGoogle();
-      // onAuthChange will handle the redirect
+      // Keep loading state - onAuthChange will handle redirect when auth completes
+      // Don't set loading to false here - let onAuthChange handle it
     } catch (error: any) {
       console.error("Auth error:", error);
-      setError(error.message || "Failed to sign in with Google. Please try again.");
+      let errorMessage = "Failed to sign in with Google. Please try again.";
+      
+      if (error.code === 'auth/popup-blocked') {
+        errorMessage = "Popup was blocked. Please allow popups for this site and try again.";
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = "Sign-in cancelled. Please try again.";
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        errorMessage = "Please wait for the sign-in window to open.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -277,8 +297,20 @@ function AuthPageContent() {
                   disabled={loading}
                   className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[var(--background)] border border-gray-600 rounded-lg text-white hover:bg-gray-700/50 hover:border-gray-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <GoogleIcon />
-                  <span className="font-medium">Sign in with Google</span>
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="font-medium">Signing in...</span>
+                    </>
+                  ) : (
+                    <>
+                      <GoogleIcon />
+                      <span className="font-medium">Sign in with Google</span>
+                    </>
+                  )}
                 </button>
 
                 {/* Link to get started */}
