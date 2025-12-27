@@ -66,3 +66,4 @@ export const onAuthChange = (callback: NextOrObserver<User | null>) => {
 };
 
 export { auth };
+

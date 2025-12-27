@@ -78,3 +78,4 @@ export default function OnboardingPage() {
     </Suspense>
   );
 }
+

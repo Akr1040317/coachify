@@ -139,3 +139,4 @@ See `CALCOM_SETUP.md` for detailed setup instructions.
 - **Bookings not appearing**: Check booking was confirmed after payment
 - **Refunds not working**: Verify Stripe payment intent ID exists
 
+

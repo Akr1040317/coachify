@@ -50,3 +50,4 @@ If you still see permission errors:
 2. Refresh your browser
 3. Check Firebase Console > Firestore > Rules to confirm they're published
 4. Verify the rules match the `firestore.rules` file exactly
+

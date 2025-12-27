@@ -29,3 +29,4 @@ export function BadgeVerified({ className = "" }: BadgeVerifiedProps) {
     </span>
   );
 }
+

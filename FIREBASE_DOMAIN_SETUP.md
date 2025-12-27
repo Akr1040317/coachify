@@ -47,3 +47,4 @@ If you have multiple environments, add all of them:
 - `coachify-ed.vercel.app` (your current Vercel deployment)
 - Any custom domains you configure
 - Preview deployment domains (if you want to test on preview URLs)
+

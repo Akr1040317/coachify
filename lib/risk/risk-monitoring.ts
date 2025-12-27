@@ -183,3 +183,4 @@ export async function getHighRiskCoaches(coaches: (CoachData & { id: string })[]
     .filter(rs => rs.overallScore > 50)
     .sort((a, b) => b.overallScore - a.overallScore);
 }
+

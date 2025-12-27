@@ -124,3 +124,4 @@ export function PaymentSetupBlock({ stripeStatus }: PaymentSetupBlockProps) {
     </div>
   );
 }
+

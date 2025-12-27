@@ -47,3 +47,4 @@ export function GradientCard({
     </motion.div>
   );
 }
+

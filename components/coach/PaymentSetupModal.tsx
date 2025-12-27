@@ -117,3 +117,4 @@ export function PaymentSetupModal({ isOpen, onClose, stripeStatus }: PaymentSetu
     </AnimatePresence>
   );
 }
+

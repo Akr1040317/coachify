@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBooking, updateBooking } from "@/lib/firebase/firestore";
 import { calcomClient } from "@/lib/calcom/client";
 import { createRefund } from "@/lib/firebase/refunds";
+import { Timestamp } from "firebase/firestore";
 
 /**
  * Cancel a booking and handle refund if needed
@@ -61,9 +62,10 @@ export async function POST(request: NextRequest) {
     // Update booking in Firestore
     await updateBooking(bookingId, {
       status: "cancelled",
-      cancelledAt: new Date(),
+      cancelledAt: Timestamp.now(),
       cancellationReason: reason,
       refundId: refundResult?.id,
+      refundAmountCents: refundResult?.amount,
     });
 
     return NextResponse.json({

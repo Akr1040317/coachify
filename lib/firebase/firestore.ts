@@ -450,7 +450,9 @@ export interface BookingData {
   rescheduleReason?: string;
   originalScheduledStart?: Timestamp; // For rescheduled bookings
   googleCalendarEventId?: string; // For Google Calendar sync
+  calcomBookingId?: string; // For Cal.com sync
   stripePaymentIntentId?: string; // Link to payment
+  paymentStatus?: "pending" | "paid" | "refunded"; // Payment status
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

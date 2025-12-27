@@ -240,3 +240,4 @@ export function CourseModal({ courseId, isOpen, onClose, onEnroll }: CourseModal
   );
 }
 
+

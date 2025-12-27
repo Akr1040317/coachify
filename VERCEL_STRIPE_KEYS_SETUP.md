@@ -89,3 +89,4 @@ If you encounter issues:
 2. Verify the keys are correctly set in Vercel dashboard
 3. Ensure you've redeployed after adding the variables
 4. Check Stripe Dashboard for any API errors
+

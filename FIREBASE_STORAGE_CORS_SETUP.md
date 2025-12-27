@@ -83,3 +83,4 @@ If you deploy to a new domain, update `firebase-storage-cors.json` and re-run th
 - CORS configuration is optional but can improve upload performance for large files
 - Both solutions can work together - the app will try the API route first, then fall back to direct uploads
 
+
