@@ -91,9 +91,8 @@ export async function POST(request: NextRequest) {
       } 
       // Handle booking update or creation
       else if (metadata?.bookingId) {
-        await updateBooking(metadata.bookingId, {
-          status: "confirmed",
-        });
+        // Keep booking as "requested" - coach will confirm it
+        // Status is already set when booking was created
       } else if (metadata?.coachId && metadata?.scheduledStart) {
         // Create booking for session
         const scheduledStart = Timestamp.fromDate(new Date(metadata.scheduledStart));
@@ -107,10 +106,11 @@ export async function POST(request: NextRequest) {
           sessionMinutes,
           priceCents: session.amount_total || 0,
           currency: session.currency || "usd",
-          status: "confirmed",
+          status: "requested", // Coach needs to confirm
           scheduledStart,
           scheduledEnd,
           stripeCheckoutSessionId: session.id,
+          customOfferingId: metadata.customOfferingId,
         });
       }
     }

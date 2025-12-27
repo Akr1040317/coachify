@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { getCoachData, getVideos, getCourses, getArticles, getReviews, type CoachData } from "@/lib/firebase/firestore";
 import { where } from "firebase/firestore";
+import { onAuthChange } from "@/lib/firebase/auth";
+import { User } from "firebase/auth";
 import { GradientCard } from "@/components/ui/GradientCard";
 import { BadgeVerified } from "@/components/ui/BadgeVerified";
 import { GlowButton } from "@/components/ui/GlowButton";
@@ -12,6 +14,7 @@ import Image from "next/image";
 
 export default function CoachProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const coachId = params.coachId as string;
   const [coach, setCoach] = useState<CoachData | null>(null);
   const [freeVideos, setFreeVideos] = useState<any[]>([]);
@@ -19,9 +22,14 @@ export default function CoachProfilePage() {
   const [articles, setArticles] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
+    const unsubscribe = onAuthChange((user: User | null) => {
+      setUser(user);
+    });
     loadCoachData();
+    return () => unsubscribe();
   }, [coachId]);
 
   const loadCoachData = async () => {
@@ -305,25 +313,29 @@ export default function CoachProfilePage() {
                     {coach.customOfferings
                       .filter((o: any) => o.isActive)
                       .map((offering: any) => (
-                        <Link
+                        <button
                           key={offering.id}
-                          href={`/app/student/bookings/new?coachId=${coachId}&offeringId=${offering.id}`}
-                          className="block"
+                          onClick={() => {
+                            if (!user) {
+                              router.push(`/auth?redirect=/coach/${coachId}`);
+                              return;
+                            }
+                            router.push(`/app/student/bookings/new?coachId=${coachId}&offeringId=${offering.id}`);
+                          }}
+                          className="w-full text-left p-3 bg-[var(--card)] rounded-lg hover:bg-[var(--card)]/80 transition-colors cursor-pointer border-2 border-transparent hover:border-blue-500/30"
                         >
-                          <div className="p-3 bg-[var(--card)] rounded-lg hover:bg-[var(--card)]/80 transition-colors cursor-pointer border-2 border-transparent hover:border-blue-500/30">
-                            <div className="font-semibold">{offering.name}</div>
-                            <div className="text-sm text-gray-400 mb-1">{offering.durationMinutes} minutes</div>
-                            <div className="text-2xl font-bold">
-                              {offering.isFree ? "FREE" : `$${(offering.priceCents / 100).toFixed(2)}`}
-                            </div>
-                            {offering.description && (
-                              <div className="text-xs text-gray-500 mt-1">{offering.description}</div>
-                            )}
-                            {!offering.isFree && (
-                              <div className="mt-2 text-xs text-blue-400">Click to book →</div>
-                            )}
+                          <div className="font-semibold">{offering.name}</div>
+                          <div className="text-sm text-gray-400 mb-1">{offering.durationMinutes} minutes</div>
+                          <div className="text-2xl font-bold">
+                            {offering.isFree ? "FREE" : `$${(offering.priceCents / 100).toFixed(2)}`}
                           </div>
-                        </Link>
+                          {offering.description && (
+                            <div className="text-xs text-gray-500 mt-1">{offering.description}</div>
+                          )}
+                          {!offering.isFree && (
+                            <div className="mt-2 text-xs text-blue-400">Click to book →</div>
+                          )}
+                        </button>
                       ))}
                   </>
                 )}

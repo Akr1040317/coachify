@@ -418,6 +418,7 @@ export interface BookingData {
   scheduledEnd: Timestamp;
   meetingLink?: string;
   stripeCheckoutSessionId?: string;
+  customOfferingId?: string;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
