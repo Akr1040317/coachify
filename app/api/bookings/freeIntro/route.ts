@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       status: "confirmed",
       scheduledStart: startTime,
       scheduledEnd: endTime,
-      timeZone: timeZone || coach.timezone || coach.timeZone || "America/New_York",
+      timeZone: timeZone || coach.timezone || "America/New_York",
       bufferMinutes: bufferMinutes || 0,
     });
 

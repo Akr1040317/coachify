@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBooking, updateBooking } from "@/lib/firebase/firestore";
 import { calcomClient } from "@/lib/calcom/client";
-import { createRefund } from "@/lib/firebase/payments";
+import { createRefund } from "@/lib/firebase/refunds";
 
 /**
  * Cancel a booking and handle refund if needed
