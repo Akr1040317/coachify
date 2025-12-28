@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     
     // Create Stripe Connect checkout session with platform fee
+    // Note: createConnectCheckoutSession will add session_id={CHECKOUT_SESSION_ID} to the success URL
     const checkoutSession = await createConnectCheckoutSession({
       amountCents: finalPriceCents,
       currency: "usd",

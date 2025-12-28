@@ -135,7 +135,7 @@ export async function createConnectCheckoutSession(params: {
         coachEarningsCents: coachEarningsCents.toString(),
       },
     },
-    success_url: successUrl,
+    success_url: `${successUrl}${successUrl.includes('?') ? '&' : '?'}session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: cancelUrl,
     metadata: {
       ...metadata,

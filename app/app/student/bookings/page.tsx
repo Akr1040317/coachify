@@ -36,16 +36,23 @@ function StudentBookingsPageContent() {
     return () => unsubscribe();
   }, [router]);
 
-  // Check for success query parameter
+  // Check for success query parameter or session_id (from Stripe redirect)
   useEffect(() => {
-    if (searchParams?.get("success") === "true") {
+    const successParam = searchParams?.get("success");
+    const sessionId = searchParams?.get("session_id");
+    
+    if (successParam === "true" || sessionId) {
       setShowSuccess(true);
-      // Remove query parameter from URL
+      // Reload bookings to show the new booking
+      if (user) {
+        loadBookings(user.uid);
+      }
+      // Remove query parameters from URL
       router.replace("/app/student/bookings");
       // Hide success message after 5 seconds
       setTimeout(() => setShowSuccess(false), 5000);
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, user]);
 
   const loadBookings = async (studentId: string) => {
     setLoading(true);
