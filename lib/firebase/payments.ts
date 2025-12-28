@@ -109,6 +109,7 @@ export async function createConnectCheckoutSession(params: {
   // Create checkout session with payment intent data for Connect
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
+    locale: "auto", // Let Stripe auto-detect user's browser locale to prevent localization errors
     line_items: [
       {
         price_data: {
