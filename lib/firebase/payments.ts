@@ -106,6 +106,23 @@ export async function createConnectCheckoutSession(params: {
   const platformFeeCents = calculatePlatformFee(amountCents);
   const coachEarningsCents = calculateCoachEarnings(amountCents, platformFeeCents);
 
+  // Construct success URL with session_id parameter
+  // Ensure URL is absolute and properly formatted - Stripe requires absolute URLs
+  if (!successUrl.startsWith('http://') && !successUrl.startsWith('https://')) {
+    throw new Error(`Success URL must be absolute (start with http:// or https://), got: ${successUrl}`);
+  }
+  if (!cancelUrl.startsWith('http://') && !cancelUrl.startsWith('https://')) {
+    throw new Error(`Cancel URL must be absolute (start with http:// or https://), got: ${cancelUrl}`);
+  }
+  
+  const finalSuccessUrl = `${successUrl}${successUrl.includes('?') ? '&' : '?'}session_id={CHECKOUT_SESSION_ID}`;
+  
+  // Log URLs for debugging
+  console.log("Creating Stripe checkout session with URLs:", {
+    successUrl: finalSuccessUrl,
+    cancelUrl: cancelUrl,
+  });
+
   // Create checkout session with payment intent data for Connect
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
@@ -136,7 +153,7 @@ export async function createConnectCheckoutSession(params: {
         coachEarningsCents: coachEarningsCents.toString(),
       },
     },
-    success_url: `${successUrl}${successUrl.includes('?') ? '&' : '?'}session_id={CHECKOUT_SESSION_ID}`,
+    success_url: finalSuccessUrl,
     cancel_url: cancelUrl,
     metadata: {
       ...metadata,

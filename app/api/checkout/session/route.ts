@@ -55,7 +55,15 @@ export async function POST(request: NextRequest) {
       productDescription = `${sessionMinutes}-minute ${bookingType} session`;
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    // Get base URL - prefer environment variable, fallback to request origin, then localhost
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                    (request.headers.get('origin') || request.headers.get('referer')?.split('/').slice(0, 3).join('/')) ||
+                    "http://localhost:3000";
+    
+    // Ensure baseUrl is properly formatted
+    const cleanBaseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
+    
+    console.log("Checkout session creation - baseUrl:", cleanBaseUrl);
     
     // Create Stripe Connect checkout session with platform fee
     // Note: createConnectCheckoutSession will add session_id={CHECKOUT_SESSION_ID} to the success URL
@@ -65,8 +73,8 @@ export async function POST(request: NextRequest) {
       coachId,
       productName,
       productDescription,
-      successUrl: `${baseUrl}/app/student/bookings?success=true`,
-      cancelUrl: `${baseUrl}/coach/${coachId}?canceled=true`,
+      successUrl: `${cleanBaseUrl}/app/student/bookings?success=true`,
+      cancelUrl: `${cleanBaseUrl}/coach/${coachId}?canceled=true`,
       metadata: {
         userId,
         coachId,
